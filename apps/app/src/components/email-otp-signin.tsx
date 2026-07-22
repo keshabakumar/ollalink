@@ -2,6 +2,7 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@v1/ui/button";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const inputCls =
@@ -9,6 +10,7 @@ const inputCls =
 
 export function EmailOtpSignin() {
   const { signIn } = useAuthActions();
+  const router = useRouter();
   const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,13 @@ export function EmailOtpSignin() {
         const fd = new FormData(e.currentTarget);
         setPending(true);
         void signIn("resend-otp", fd)
+          .then(() => {
+            // ✅ Redirect to dashboard after successful OTP verification.
+            // A hard navigation triggers the middleware, which sees the
+            // freshly-set auth cookie and lets us into "/".
+            router.push("/");
+            router.refresh();
+          })
           .catch(() => setError("Invalid or expired code."))
           .finally(() => setPending(false));
       }}

@@ -2,6 +2,7 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@v1/ui/button";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Mode = "signIn" | "signUp" | "verify" | "forgot" | "reset";
@@ -45,6 +46,7 @@ const Switch = ({ label, onClick }: { label: string; onClick: () => void }) => (
 
 export function AuthForm() {
   const { signIn } = useAuthActions();
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,19 +70,36 @@ export function AuthForm() {
     }
   };
 
-  const submitSignIn = go(async () => { await signIn("password", { email, password, flow: "signIn" }); });
+  // After a successful sign-in / verification / reset, navigate to "/" so the
+  // middleware sees the freshly-set auth cookie and lets us into the dashboard
+  // (or redirects to /onboarding if the user has no username yet).
+  const goToDashboard = () => {
+    router.push("/");
+    router.refresh();
+  };
+
+  const submitSignIn = go(async () => {
+    await signIn("password", { email, password, flow: "signIn" });
+    goToDashboard();
+  });
   const submitSignUp = go(async () => {
     await signIn("password", { email, password, flow: "signUp" });
     setInfo("Enter the verification code (check server logs while email is in dev mode).");
     setMode("verify");
   });
-  const submitVerify = go(async () => { await signIn("password", { email, code, flow: "email-verification" }); });
+  const submitVerify = go(async () => {
+    await signIn("password", { email, code, flow: "email-verification" });
+    goToDashboard();
+  });
   const submitForgot = go(async () => {
     await signIn("password", { email, flow: "reset" });
     setInfo("Enter the reset code (check server logs) and a new password.");
     setMode("reset");
   });
-  const submitReset = go(async () => { await signIn("password", { email, code, newPassword, flow: "reset-verification" }); });
+  const submitReset = go(async () => {
+    await signIn("password", { email, code, newPassword, flow: "reset-verification" });
+    goToDashboard();
+  });
   const switchTo = (m: Mode) => { setError(null); setInfo(null); setMode(m); };
 
   const shellProps = { pending, error, info };

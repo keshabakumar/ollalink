@@ -3,7 +3,11 @@ import { internal } from "./_generated/api";
 
 // Email providers for password-reset and email-verification codes.
 // The code is logged (dev fallback) AND, when SMTP is configured, emailed via the
-// Node SMTP action (e.g. a local Mailpit inbox).
+// Node smtp action (e.g. a local Mailpit inbox).
+//
+// IMPORTANT: sendVerificationRequest re-throws on failure so the client-side
+// signIn() promise rejects and the user sees an error instead of waiting
+// forever for a code that was never sent.
 
 type Ctx = { runAction: (ref: unknown, args: unknown) => Promise<unknown> };
 
@@ -21,7 +25,10 @@ async function send(ctx: Ctx | undefined, label: string, email: string, token: s
       text: `Your ${label} code is ${token}`,
     });
   } catch (e) {
-    console.warn(`[email] ${label} send failed: ${(e as Error).message}`);
+    console.error(`[email] ${label} send failed for ${email}: ${(e as Error).message}`);
+    // Re-throw so the client signIn() rejects and the UI can show an error
+    // instead of silently telling the user "code sent" when it wasn't.
+    throw new Error(`Could not send ${label} email. Please try again or contact support.`);
   }
 }
 

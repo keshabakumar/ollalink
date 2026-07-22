@@ -12,7 +12,11 @@ const I18nMiddleware = createI18nMiddleware({
   urlMappingStrategy: "rewrite",
 });
 
-const isSignInPage = createRouteMatcher(["/login"]);
+// Match both "/login" and locale-prefixed variants like "/en/login", "/fr/login".
+// With urlMappingStrategy: "rewrite", the underlying path may be locale-prefixed,
+// so a bare "/login" matcher would miss those and fail to redirect authenticated
+// users away from the login page.
+const isSignInPage = createRouteMatcher(["/login", "/:locale/login"]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isAuthenticated = await convexAuth.isAuthenticated();

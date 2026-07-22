@@ -3,7 +3,11 @@ import { internal } from "./_generated/api";
 
 /**
  * Magic email OTP provider (passwordless). The code is logged (dev fallback) AND, when
- * SMTP is configured, emailed via the Node SMTP action (e.g. local Mailpit inbox).
+ * SMTP is configured, emailed via the Node smtp action (e.g. local Mailpit inbox).
+ *
+ * IMPORTANT: sendVerificationRequest re-throws on failure so the client-side
+ * signIn() promise rejects and the user sees an error instead of waiting
+ * forever for a code that was never sent.
  */
 export const ResendOTP = Email({
   id: "resend-otp",
@@ -26,7 +30,10 @@ export const ResendOTP = Email({
         text: `Your sign-in code is ${token}`,
       });
     } catch (e) {
-      console.warn(`[email] OTP send failed: ${(e as Error).message}`);
+      console.error(`[email] OTP send failed for ${email}: ${(e as Error).message}`);
+      // Re-throw so the client signIn() rejects and the UI can show an error
+      // instead of silently telling the user "code sent" when it wasn't.
+      throw new Error("Could not send OTP email. Please try again or contact support.");
     }
   },
 });
