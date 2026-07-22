@@ -15,15 +15,28 @@ export const sendEmail = internalAction({
     const host = process.env.SMTP_HOST;
     if (!host) {
       if (process.env.RESEND_API_KEY) {
-        const { sendEmail: resendEmail } = await import("./email/index.js");
-        await resendEmail({
-          to,
-          subject,
-          html: text,
-          text,
+        // Direct fetch to Resend API to avoid dynamic import bundler issues
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: process.env.RESEND_SENDER_EMAIL_AUTH || "onboarding@resend.dev",
+            to,
+            subject,
+            html: text,
+            text,
+          }),
         });
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("[email] Resend API error:", errorData);
+          throw new Error("Failed to send email via Resend API");
+        }
       } else {
-        console.warn("No SMTP_HOST or RESEND_API_KEY provided. Email not sent.");
+        console.warn("[email] No SMTP_HOST or RESEND_API_KEY provided. Email not sent.");
       }
       return;
     }
