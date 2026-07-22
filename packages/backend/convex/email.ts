@@ -13,7 +13,20 @@ export const sendEmail = internalAction({
   args: { to: v.string(), subject: v.string(), text: v.string() },
   handler: async (_ctx, { to, subject, text }) => {
     const host = process.env.SMTP_HOST;
-    if (!host) return;
+    if (!host) {
+      if (process.env.RESEND_API_KEY) {
+        const { sendEmail: resendEmail } = await import("./email/index.js");
+        await resendEmail({
+          to,
+          subject,
+          html: text,
+          text,
+        });
+      } else {
+        console.warn("No SMTP_HOST or RESEND_API_KEY provided. Email not sent.");
+      }
+      return;
+    }
     const transport = nodemailer.createTransport({
       host,
       port: Number(process.env.SMTP_PORT ?? "1025"),
