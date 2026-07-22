@@ -1,0 +1,154 @@
+# Branded, signed ollalink agent builds (Windows + macOS).
+#
+# SCAFFOLD: this pipeline checks out the upstream QuickDesk source at a pinned tag,
+# applies the ollalink rebrand (quickdesk/agent-build/rebrand-agent.sh — bakes in the
+# signaling URL + API key), builds the Qt app, code-signs, packages, and uploads artifacts.
+#
+# To make it produce real signed binaries, add these repo secrets:
+#   QUICKDESK_API_KEY        signaling API key baked into the agent
+#   WIN_CODESIGN_PFX_B64     base64 of an Authenticode .pfx
+#   WIN_CODESIGN_PASSWORD    its password
+#   APPLE_CERT_B64           base64 of a Developer ID Application .p12
+#   APPLE_CERT_PASSWORD      its password
+#   APPLE_ID / APPLE_APP_PASSWORD / APPLE_TEAM_ID   for notarization
+#
+# Note: QuickDesk bundles a prebuilt `quickdesk-remoting` (Chromium) component. If your
+# fork doesn't vendor it, add a step to fetch it before the build (see upstream README).
+
+name: agent-build
+on:
+  workflow_dispatch:
+    inputs:
+      quickdesk_ref:
+        description: "Upstream QuickDesk tag to build from"
+        default: "v4.0.1.0"
+      sign:
+        description: "Code-sign the output (requires secrets)"
+        type: boolean
+        default: false
+
+env:
+  QT_VERSION: "6.8.3"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout (ollalink rebrand scripts)
+        uses: actions/checkout@v4
+
+      - name: Fetch upstream QuickDesk source
+        shell: bash
+        run: git clone --depth 1 --branch "${{ github.event.inputs.quickdesk_ref }}" https://github.com/barry-ran/QuickDesk.git qd-src
+
+      - name: Apply ollalink rebrand
+        shell: bash
+        env:
+          OLLALINK_SIGNALING: "wss://signaling.ollalink.com"
+        run: bash quickdesk/agent-build/rebrand-agent.sh qd-src
+
+      - name: Set up Qt ${{ env.QT_VERSION }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: "qtmultimedia qtwebsockets"
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build (Release)
+        shell: cmd
+        working-directory: qd-src
+        env:
+          ENV_QT_PATH: ${{ env.Qt6_DIR }}
+          ENV_QUICKDESK_API_KEY: ${{ secrets.QUICKDESK_API_KEY }}
+        run: scripts\build_qd_win.bat Release
+
+      - name: Code-sign binaries
+        if: ${{ github.event.inputs.sign == 'true' }}
+        shell: pwsh
+        run: |
+          $pfx = "$env:RUNNER_TEMP\cs.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WIN_CODESIGN_PFX_B64))
+          Get-ChildItem qd-src\build -Recurse -Include *.exe | ForEach-Object {
+            & signtool sign /f $pfx /p $env:WIN_CODESIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+          }
+        env:
+          WIN_CODESIGN_PFX_B64: ${{ secrets.WIN_CODESIGN_PFX_B64 }}
+          WIN_CODESIGN_PASSWORD: ${{ secrets.WIN_CODESIGN_PASSWORD }}
+
+      - name: Package installer (Inno Setup)
+        shell: cmd
+        working-directory: qd-src
+        run: |
+          scripts\publish_qd_win.bat Release
+          scripts\package_qd_win.bat Release
+
+      - name: Sign installer
+        if: ${{ github.event.inputs.sign == 'true' }}
+        shell: pwsh
+        run: |
+          $pfx = "$env:RUNNER_TEMP\cs.pfx"
+          Get-ChildItem qd-src -Recurse -Include *setup*.exe | ForEach-Object {
+            & signtool sign /f $pfx /p $env:WIN_CODESIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+          }
+        env:
+          WIN_CODESIGN_PASSWORD: ${{ secrets.WIN_CODESIGN_PASSWORD }}
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollalink-agent-windows
+          path: qd-src/**/*setup*.exe
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch upstream QuickDesk source
+        run: git clone --depth 1 --branch "${{ github.event.inputs.quickdesk_ref }}" https://github.com/barry-ran/QuickDesk.git qd-src
+      - name: Apply ollalink rebrand
+        env:
+          OLLALINK_SIGNALING: "wss://signaling.ollalink.com"
+        run: bash quickdesk/agent-build/rebrand-agent.sh qd-src
+      - name: Set up Qt ${{ env.QT_VERSION }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: "qtmultimedia qtwebsockets"
+      - name: Import signing certificate
+        if: ${{ github.event.inputs.sign == 'true' }}
+        run: |
+          echo "$APPLE_CERT_B64" | base64 -d > cert.p12
+          security create-keychain -p actions build.keychain
+          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          security list-keychains -s build.keychain
+        env:
+          APPLE_CERT_B64: ${{ secrets.APPLE_CERT_B64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+      - name: Build (Release)
+        working-directory: qd-src
+        env:
+          ENV_QT_PATH: ${{ env.Qt6_DIR }}
+          ENV_QUICKDESK_API_KEY: ${{ secrets.QUICKDESK_API_KEY }}
+        run: bash scripts/build_qd_mac.sh Release
+      - name: Package + notarize
+        if: ${{ github.event.inputs.sign == 'true' }}
+        working-directory: qd-src
+        run: |
+          bash scripts/publish_qd_mac.sh Release
+          bash scripts/package_qd_mac.sh Release
+          # notarize the produced .dmg
+          DMG=$(ls *.dmg | head -1)
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple "$DMG"
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollalink-agent-macos
+          path: qd-src/**/*.dmg
