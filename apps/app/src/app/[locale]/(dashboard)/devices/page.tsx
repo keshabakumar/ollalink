@@ -2,6 +2,7 @@
 
 import { useWorkspace } from "@/lib/useWorkspace";
 import { api } from "@v1/backend/convex/_generated/api";
+import type { Id } from "@v1/backend/convex/_generated/dataModel";
 import { Button } from "@v1/ui/button";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
@@ -39,7 +40,7 @@ export default function DevicesPage() {
     }
   };
 
-  const handleRemove = async (deviceId: string) => {
+  const handleRemove = async (deviceId: Id<"devices">) => {
     try {
       await removeDevice({ deviceId });
       toast.success("Device removed");
@@ -88,7 +89,7 @@ export default function DevicesPage() {
                   </td>
                 </tr>
               )}
-              {devices?.map((device: { _id: string, name: string, status: string, lastSeenAt?: number }) => (
+              {devices?.map((device: { _id: Id<"devices">, name: string, status: string, lastSeenAt?: number }) => (
                 <tr
                   key={device._id}
                   className="border-b border-border/50 last:border-0"
