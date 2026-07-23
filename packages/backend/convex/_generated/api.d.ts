@@ -16,6 +16,7 @@ import type * as backend from "../backend.js";
 import type * as counters from "../counters.js";
 import type * as dashboard from "../dashboard.js";
 import type * as devGuard from "../devGuard.js";
+import type * as devices from "../devices.js";
 import type * as email_index from "../email/index.js";
 import type * as email_templates_subscriptionEmail from "../email/templates/subscriptionEmail.js";
 import type * as email from "../email.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   counters: typeof counters;
   dashboard: typeof dashboard;
   devGuard: typeof devGuard;
+  devices: typeof devices;
   "email/index": typeof email_index;
   "email/templates/subscriptionEmail": typeof email_templates_subscriptionEmail;
   email: typeof email;
