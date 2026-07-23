@@ -7,6 +7,7 @@ import type { Id } from "@v1/backend/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import {
   Boxes,
+  Cpu,
   CreditCard,
   FolderOpen,
   LayoutDashboard,
@@ -25,6 +26,7 @@ import { ThemeSwitcher } from "./theme-switcher";
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/jobs", label: "Jobs", icon: ListChecks },
+  { href: "/devices", label: "Devices", icon: Cpu },
   { href: "/platform", label: "Platform", icon: Boxes },
   { href: "/files", label: "Files", icon: FolderOpen },
   { href: "/settings", label: "Settings", icon: Settings },

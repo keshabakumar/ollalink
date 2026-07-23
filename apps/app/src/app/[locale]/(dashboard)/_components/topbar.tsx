@@ -8,6 +8,7 @@ const APP_VERSION = "0.1.0";
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
   "/jobs": "Jobs",
+  "/devices": "Devices",
   "/platform": "Platform",
   "/files": "Files",
   "/settings": "Settings",

@@ -62,6 +62,14 @@ export default defineSchema({
     .index("by_user_metric", ["userId", "metric"])
     .index("by_workspace_metric", ["workspaceId", "metric"]),
 
+  devices: defineTable({
+    workspaceId: v.id("workspaces"),
+    name: v.string(),
+    status: v.string(),
+    lastSeenAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_workspace", ["workspaceId"]),
+
   apiKeys: defineTable({
     workspaceId: v.optional(v.id("workspaces")),
     userId: v.id("users"),
