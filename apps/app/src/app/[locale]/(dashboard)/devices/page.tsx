@@ -12,13 +12,10 @@ import { Cpu, Trash2 } from "lucide-react";
 export default function DevicesPage() {
   const { current } = useWorkspace();
   const devices = useQuery(
-    // @ts-ignore
     api.devices.list,
     current ? { workspaceId: current } : "skip"
   );
-  // @ts-ignore
   const createDevice = useMutation(api.devices.create);
-  // @ts-ignore
   const removeDevice = useMutation(api.devices.remove);
   
   const [pending, setPending] = useState(false);
