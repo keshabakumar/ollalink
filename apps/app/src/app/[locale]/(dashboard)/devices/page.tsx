@@ -39,7 +39,7 @@ export default function DevicesPage() {
     }
   };
 
-  const handleRemove = async (deviceId: any) => {
+  const handleRemove = async (deviceId: string) => {
     try {
       await removeDevice({ deviceId });
       toast.success("Device removed");
@@ -88,7 +88,7 @@ export default function DevicesPage() {
                   </td>
                 </tr>
               )}
-              {devices?.map((device: any) => (
+              {devices?.map((device: { _id: string, name: string, status: string, lastSeenAt?: number }) => (
                 <tr
                   key={device._id}
                   className="border-b border-border/50 last:border-0"

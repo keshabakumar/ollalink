@@ -40,7 +40,6 @@ export function CommandPalette() {
   };
 
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop dismiss
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-32">
       <button
         type="button"
