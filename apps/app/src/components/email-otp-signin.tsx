@@ -23,9 +23,13 @@ export function EmailOtpSignin() {
           e.preventDefault();
           setError(null);
           const fd = new FormData(e.currentTarget);
+          const rawEmail = (fd.get("email") as string) || "";
+          const email = rawEmail.trim().toLowerCase();
           setPending(true);
-          void signIn("resend-otp", fd)
-            .then(() => setStep({ email: fd.get("email") as string }))
+          const params = new FormData();
+          params.set("email", email);
+          void signIn("resend-otp", params)
+            .then(() => setStep({ email }))
             .catch(() => setError("Could not send code. Try again."))
             .finally(() => setPending(false));
         }}
@@ -52,12 +56,16 @@ export function EmailOtpSignin() {
         e.preventDefault();
         setError(null);
         const fd = new FormData(e.currentTarget);
+        const rawEmail = (fd.get("email") as string) || "";
+        const email = rawEmail.trim().toLowerCase();
+        const rawCode = (fd.get("code") as string) || "";
+        const code = rawCode.trim();
         setPending(true);
-        void signIn("resend-otp", fd)
+        const params = new FormData();
+        params.set("email", email);
+        params.set("code", code);
+        void signIn("resend-otp", params)
           .then(() => {
-            // ✅ Redirect to dashboard after successful OTP verification.
-            // A hard navigation triggers the middleware, which sees the
-            // freshly-set auth cookie and lets us into "/".
             router.push("/");
             router.refresh();
           })

@@ -79,25 +79,25 @@ export function AuthForm() {
   };
 
   const submitSignIn = go(async () => {
-    await signIn("password", { email, password, flow: "signIn" });
+    await signIn("password", { email: email.trim().toLowerCase(), password, flow: "signIn" });
     goToDashboard();
   });
   const submitSignUp = go(async () => {
-    await signIn("password", { email, password, flow: "signUp" });
+    await signIn("password", { email: email.trim().toLowerCase(), password, flow: "signUp" });
     setInfo("Enter the verification code (check server logs while email is in dev mode).");
     setMode("verify");
   });
   const submitVerify = go(async () => {
-    await signIn("password", { email, code, flow: "email-verification" });
+    await signIn("password", { email: email.trim().toLowerCase(), code: code.trim(), flow: "email-verification" });
     goToDashboard();
   });
   const submitForgot = go(async () => {
-    await signIn("password", { email, flow: "reset" });
+    await signIn("password", { email: email.trim().toLowerCase(), flow: "reset" });
     setInfo("Enter the reset code (check server logs) and a new password.");
     setMode("reset");
   });
   const submitReset = go(async () => {
-    await signIn("password", { email, code, newPassword, flow: "reset-verification" });
+    await signIn("password", { email: email.trim().toLowerCase(), code: code.trim(), newPassword, flow: "reset-verification" });
     goToDashboard();
   });
   const switchTo = (m: Mode) => { setError(null); setInfo(null); setMode(m); };
