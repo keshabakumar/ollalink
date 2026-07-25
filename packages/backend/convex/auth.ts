@@ -5,13 +5,24 @@ import { ConvexError } from "convex/values";
 import { ResendOTP } from "./ResendOTP";
 import { ResendOTPReset, ResendOTPVerify } from "./passwordProviders";
 
-// Auto-sanitize JWT_PRIVATE_KEY to single-line format expected by @convex-dev/auth & jose (strips byte 92 '\\n')
+// Rebuild a proper multi-line PEM from the JWT_PRIVATE_KEY regardless of how it was stored.
+// Convex env vars sometimes collapse real newlines/\n escapes into spaces, producing a single-
+// line string that jose cannot parse. We strip all whitespace from the base64 body and
+// re-wrap at 64 characters to produce a standards-compliant PEM block.
 if (process.env.JWT_PRIVATE_KEY) {
-  process.env.JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY
-    .replace(/\\n/g, " ")
-    .replace(/\r/g, "")
-    .replace(/\n/g, " ")
-    .trim();
+  const raw = process.env.JWT_PRIVATE_KEY;
+  // Extract base64 body by removing both header/footer and ALL whitespace
+  const base64Body = raw
+    .replace(/-----BEGIN[^-]+-----/g, "")
+    .replace(/-----END[^-]+-----/g, "")
+    .replace(/\\n/g, "") // literal \n escapes
+    .replace(/[\r\n\s]+/g, ""); // real whitespace
+  // Re-wrap at 64 chars per line (standard PEM format)
+  const lines = base64Body.match(/.{1,64}/g) ?? [];
+  process.env.JWT_PRIVATE_KEY =
+    "-----BEGIN PRIVATE KEY-----\n" +
+    lines.join("\n") +
+    "\n-----END PRIVATE KEY-----";
 }
 
 // Full auth: email+password (with strength policy, email verification, and password reset),
