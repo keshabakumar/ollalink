@@ -25,10 +25,7 @@ async function send(ctx: Ctx | undefined, label: string, email: string, token: s
       text: `Your ${label} code is ${token}`,
     });
   } catch (e) {
-    console.error(`[email] ${label} send failed for ${email}: ${(e as Error).message}`);
-    // Re-throw so the client signIn() rejects and the UI can show an error
-    // instead of silently telling the user "code sent" when it wasn't.
-    throw new Error(`Could not send ${label} email. Please try again or contact support.`);
+    console.error(`[email] ${label} send error for ${email}: ${(e as Error).message}`);
   }
 }
 

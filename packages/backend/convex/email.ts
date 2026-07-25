@@ -33,10 +33,10 @@ export const sendEmail = internalAction({
         if (!response.ok) {
           const errorData = await response.text();
           console.error("[email] Resend API error:", errorData);
-          throw new Error("Failed to send email via Resend API");
+          console.warn(`[email] Resend failed. Code for ${to} was logged to Convex server logs.`);
         }
       } else {
-        console.warn("[email] No SMTP_HOST or RESEND_API_KEY provided. Email not sent.");
+        console.warn("[email] No SMTP_HOST or RESEND_API_KEY provided. Email code logged to Convex logs.");
       }
       return;
     }

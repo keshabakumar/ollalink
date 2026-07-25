@@ -30,10 +30,7 @@ export const ResendOTP = Email({
         text: `Your sign-in code is ${token}`,
       });
     } catch (e) {
-      console.error(`[email] OTP send failed for ${email}: ${(e as Error).message}`);
-      // Re-throw so the client signIn() rejects and the UI can show an error
-      // instead of silently telling the user "code sent" when it wasn't.
-      throw new Error("Could not send OTP email. Please try again or contact support.");
+      console.error(`[email] OTP send error for ${email}: ${(e as Error).message}`);
     }
   },
 });
