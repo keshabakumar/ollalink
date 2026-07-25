@@ -1,0 +1,6 @@
+{
+  "name": "@v1/agent-win",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rust Windows Agent Executable & Service Container"
+}
