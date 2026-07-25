@@ -66,8 +66,9 @@ export function EmailOtpSignin() {
         params.set("code", code);
         void signIn("resend-otp", params)
           .then(() => {
-            router.push("/");
-            router.refresh();
+            // Hard navigation ensures middleware sees the new auth cookie on a full reload.
+            // Soft router.push races against session propagation and can redirect back to /login.
+            window.location.href = "/";
           })
           .catch(() => setError("Invalid or expired code."))
           .finally(() => setPending(false));

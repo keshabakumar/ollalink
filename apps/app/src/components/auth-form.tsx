@@ -74,8 +74,8 @@ export function AuthForm() {
   // middleware sees the freshly-set auth cookie and lets us into the dashboard
   // (or redirects to /onboarding if the user has no username yet).
   const goToDashboard = () => {
-    router.push("/");
-    router.refresh();
+    // Hard navigation ensures middleware sees the new auth cookie on a full reload.
+    window.location.href = "/";
   };
 
   const submitSignIn = go(async () => {
