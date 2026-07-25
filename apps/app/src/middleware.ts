@@ -17,8 +17,14 @@ const I18nMiddleware = createI18nMiddleware({
 // so a bare "/login" matcher would miss those and fail to redirect authenticated
 // users away from the login page.
 const isSignInPage = createRouteMatcher(["/login", "/:locale/login"]);
+const isPublicApiRoute = createRouteMatcher(["/api/(.*)"]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  const isApi = isPublicApiRoute(request);
+  if (isApi) {
+    return;
+  }
+
   const isAuthenticated = await convexAuth.isAuthenticated();
   const isSignIn = isSignInPage(request);
   if (isSignIn && isAuthenticated) {
