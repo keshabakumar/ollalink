@@ -58,3 +58,5 @@ packages/email/public
 # Storybook
 storybook-static
 tailwind.css
+target/
+tmp/

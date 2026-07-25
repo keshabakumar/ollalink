@@ -66,9 +66,38 @@ export default defineSchema({
     workspaceId: v.id("workspaces"),
     name: v.string(),
     status: v.string(),
+    pairingCode: v.optional(v.string()),
+    deviceToken: v.optional(v.string()),
+    hostname: v.optional(v.string()),
+    os: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+    agentVersion: v.optional(v.string()),
     lastSeenAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_workspace", ["workspaceId"]),
+  })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_pairing_code", ["pairingCode"])
+    .index("by_device_token", ["deviceToken"]),
+
+  deviceSessions: defineTable({
+    workspaceId: v.id("workspaces"),
+    deviceId: v.id("devices"),
+    userId: v.id("users"),
+    status: v.string(),
+    relayUrl: v.optional(v.string()),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+  })
+    .index("by_device", ["deviceId"])
+    .index("by_workspace", ["workspaceId"]),
+
+  deviceSignals: defineTable({
+    sessionId: v.id("deviceSessions"),
+    sender: v.string(),
+    type: v.string(),
+    payload: v.string(),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
 
   apiKeys: defineTable({
     workspaceId: v.optional(v.id("workspaces")),
