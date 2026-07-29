@@ -33,7 +33,10 @@ export const sendEmail = internalAction({
         if (!response.ok) {
           const errorData = await response.text();
           console.error("[email] Resend API error:", errorData);
-          console.warn(`[email] Resend failed. Code for ${to} was logged to Convex server logs.`);
+          // Throw so the auth provider's sendVerificationRequest rejects and the
+          // client signIn() promise rejects — otherwise the user is told "code sent"
+          // when no code was ever delivered.
+          throw new Error(`Resend API error (${response.status}): ${errorData}`);
         }
       } else {
         console.warn("[email] No SMTP_HOST or RESEND_API_KEY provided. Email code logged to Convex logs.");

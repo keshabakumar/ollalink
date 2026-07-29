@@ -31,6 +31,9 @@ export const ResendOTP = Email({
       });
     } catch (e) {
       console.error(`[email] OTP send error for ${email}: ${(e as Error).message}`);
+      // Re-throw so the client signIn() promise rejects and the user sees an error
+      // instead of waiting forever for a code that was never sent.
+      throw new Error(`Failed to send sign-in code: ${(e as Error).message}`);
     }
   },
 });

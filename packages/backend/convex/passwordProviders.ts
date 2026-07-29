@@ -26,6 +26,9 @@ async function send(ctx: Ctx | undefined, label: string, email: string, token: s
     });
   } catch (e) {
     console.error(`[email] ${label} send error for ${email}: ${(e as Error).message}`);
+    // Re-throw so the client signIn() promise rejects and the user sees an error
+    // instead of waiting forever for a code that was never sent.
+    throw new Error(`Failed to send ${label} code: ${(e as Error).message}`);
   }
 }
 
