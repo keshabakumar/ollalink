@@ -62,13 +62,34 @@ export default function DevicesPage() {
         </div>
 
         {pairingInfo && (
-          <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-wider font-semibold text-primary/60">Agent Pairing Code</p>
-              <p className="text-2xl font-mono font-bold tracking-widest text-primary mt-1">{pairingInfo.pairingCode}</p>
-              <p className="text-xs text-primary/60 mt-1">Enter this 6-digit code in the OllaLink Windows Agent to register this computer.</p>
+          <div className="mb-6 p-6 rounded-lg border border-primary/20 bg-primary/5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wider font-semibold text-primary/60">Agent Pairing Code</p>
+                <p className="text-2xl font-mono font-bold tracking-widest text-primary mt-1">{pairingInfo.pairingCode}</p>
+                <p className="text-xs text-primary/60 mt-1">Manual install: Enter this 6-digit code in the OllaLink Windows Agent.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setPairingInfo(null)}>Dismiss</Button>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setPairingInfo(null)}>Dismiss</Button>
+            
+            <div className="border-t border-primary/10 pt-4">
+              <p className="text-sm font-medium text-primary mb-2">Or use the One-Line Install (Recommended):</p>
+              <p className="text-xs text-primary/60 mb-2">Run this in PowerShell on the remote machine. It will automatically download the agent and pair it.</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-black/40 p-2 rounded text-xs font-mono text-primary/80 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                  Invoke-WebRequest -Uri "{typeof window !== 'undefined' ? window.location.origin : ''}/install.ps1" -OutFile "$env:TEMP\install.ps1"; & "$env:TEMP\install.ps1" -PairingCode "{pairingInfo.pairingCode}"
+                </code>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`Invoke-WebRequest -Uri "${window.location.origin}/install.ps1" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -PairingCode "${pairingInfo.pairingCode}"`);
+                    toast.success("Command copied to clipboard!");
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
