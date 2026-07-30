@@ -20,7 +20,8 @@
       "output": "release"
     },
     "win": {
-      "target": ["portable"]
+      "target": ["portable"],
+      "artifactName": "OllalinkAgent.exe"
     }
   },
   "dependencies": {

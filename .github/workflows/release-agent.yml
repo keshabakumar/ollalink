@@ -1,0 +1,45 @@
+name: Build and Release Windows Agent
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'windows-agent/**'
+      - '.github/workflows/release-agent.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./windows-agent
+        run: npm install
+
+      - name: Build Electron App
+        working-directory: ./windows-agent
+        run: npm run build:electron
+
+      - name: Update Continuous Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "windows-agent/release/OllalinkAgent.exe"
+          tag: "latest"
+          name: "Latest Development Build"
+          body: "Automated build of the Ollalink Windows Agent."
+          allowUpdates: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}

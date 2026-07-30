@@ -3,9 +3,8 @@ param (
     [string]$PairingCode
 )
 
-# URL to the compiled portable executable
-# TODO: Update this URL once the agent is published to GitHub Releases or S3
-$InstallerUrl = "https://github.com/keshabakumar/ollalink/releases/latest/download/OllalinkAgent-Portable.exe"
+# URL to the compiled portable executable (automatically built via GitHub Actions)
+$InstallerUrl = "https://github.com/keshabakumar/ollalink/releases/download/latest/OllalinkAgent.exe"
 $DownloadPath = "$env:TEMP\OllalinkAgent.exe"
 
 Write-Host "========================================="
@@ -17,17 +16,9 @@ try {
     # Ignore SSL errors for testing (optional, but good if hosting on local IP during dev)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
-    # For now, we will simulate the download if the URL doesn't exist, 
-    # so the command doesn't hard-fail during development.
-    try {
-        Invoke-WebRequest -Uri $InstallerUrl -OutFile $DownloadPath -ErrorAction Stop
-        Write-Host "Download complete."
-    } catch {
-        Write-Host "Warning: Could not download from remote URL (is the release published?)."
-        Write-Host "Simulating installation for development purposes."
-        # Create a dummy executable just so Start-Process doesn't fail
-        Set-Content -Path $DownloadPath -Value "echo 'Dummy agent running'"
-    }
+    # Fail if the URL doesn't exist yet
+    Invoke-WebRequest -Uri $InstallerUrl -OutFile $DownloadPath -ErrorAction Stop
+    Write-Host "Download complete."
 
     Write-Host "Starting agent and applying pairing code..."
     
