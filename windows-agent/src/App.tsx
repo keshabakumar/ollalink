@@ -17,6 +17,17 @@ function App() {
     if (window.electron) {
       // @ts-ignore
       setStats(window.electron.getSystemStats());
+    } else {
+      // Fallback for browser (non-Electron) environment
+      setStats({
+        hostname: location.hostname || 'browser-agent',
+        platform: navigator.platform || 'web',
+        release: navigator.userAgent.match(/Windows NT [\d.]+|Mac OS X [\d._]+|Linux/)?.[0] || 'unknown',
+        totalmem: 0,
+        freemem: 0,
+        cpus: [],
+        uptime: 0,
+      });
     }
   }, []);
 
