@@ -21,7 +21,7 @@ const isPublicApiRoute = createRouteMatcher(["/api/(.*)"]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isApi = isPublicApiRoute(request);
-  if (isApi) {
+  if (isApi || request.nextUrl.pathname === "/install.ps1") {
     return;
   }
 
