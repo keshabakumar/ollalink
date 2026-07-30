@@ -10,6 +10,7 @@ import {
   Cpu,
   FolderOpen,
   LayoutDashboard,
+  LineChart,
   ListChecks,
   LogOut,
   Menu,
@@ -24,6 +25,7 @@ import { ThemeSwitcher } from "./theme-switcher";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/analytics", label: "Analytics & Logs", icon: LineChart },
   { href: "/jobs", label: "Jobs", icon: ListChecks },
   { href: "/devices", label: "Devices", icon: Cpu },
   { href: "/platform", label: "Platform", icon: Boxes },

@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireMember } from "./orgs";
+import { audit } from "./auditLog";
 
 export const list = query({
   args: { workspaceId: v.id("workspaces") },
@@ -85,6 +86,8 @@ export const generatePairingCode = mutation({
       pairingCode,
       createdAt: Date.now(),
     });
+
+    await audit(ctx, workspaceId, userId, "Device Pairing Code Generated", { deviceId, pairingCode });
 
     return { deviceId, pairingCode };
   },
@@ -178,6 +181,8 @@ export const startRemoteSession = mutation({
       startedAt: Date.now(),
     });
 
+    await audit(ctx, device.workspaceId, userId, "Remote Session Started", { deviceId, deviceName: device.name, sessionId });
+
     return sessionId;
   },
 });
@@ -237,6 +242,8 @@ export const remove = mutation({
     await requireMember(ctx, userId, device.workspaceId);
 
     await ctx.db.delete(deviceId);
+
+    await audit(ctx, device.workspaceId, userId, "Device Removed", { deviceId, deviceName: device.name });
   },
 });
 
