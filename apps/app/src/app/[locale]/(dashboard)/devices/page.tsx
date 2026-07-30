@@ -77,12 +77,12 @@ export default function DevicesPage() {
               <p className="text-xs text-primary/60 mb-2">Run this in PowerShell on the remote machine. It will automatically download the agent and pair it.</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-black/40 p-2 rounded text-xs font-mono text-primary/80 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                  Invoke-WebRequest -Uri "{typeof window !== 'undefined' ? window.location.origin : ''}/install.ps1" -OutFile "$env:TEMP\install.ps1"; & "$env:TEMP\install.ps1" -PairingCode "{pairingInfo.pairingCode}"
+                  Invoke-WebRequest -Uri "{typeof window !== 'undefined' ? window.location.origin : ''}/install.ps1" -OutFile "$env:TEMP\install.ps1"; powershell.exe -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1" -PairingCode "{pairingInfo.pairingCode}"
                 </code>
                 <Button 
                   size="sm" 
                   onClick={() => {
-                    navigator.clipboard.writeText(`Invoke-WebRequest -Uri "${window.location.origin}/install.ps1" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -PairingCode "${pairingInfo.pairingCode}"`);
+                    navigator.clipboard.writeText(`Invoke-WebRequest -Uri "${window.location.origin}/install.ps1" -OutFile "$env:TEMP\\install.ps1"; powershell.exe -ExecutionPolicy Bypass -File "$env:TEMP\\install.ps1" -PairingCode "${pairingInfo.pairingCode}"`);
                     toast.success("Command copied to clipboard!");
                   }}
                 >
