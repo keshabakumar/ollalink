@@ -12,5 +12,13 @@ contextBridge.exposeInMainWorld('electron', {
       cpus: os.cpus(),
       uptime: os.uptime(),
     };
+  },
+  getPairingCode: () => {
+    const args = process.argv;
+    const pairingCodeArgIndex = args.findIndex(arg => arg.toLowerCase() === '-pairingcode' || arg.toLowerCase() === '--pairing-code');
+    if (pairingCodeArgIndex !== -1 && args.length > pairingCodeArgIndex + 1) {
+      return args[pairingCodeArgIndex + 1];
+    }
+    return null;
   }
 });

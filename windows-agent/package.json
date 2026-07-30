@@ -9,8 +9,19 @@
     "electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
     "dev:electron": "concurrently -k \"npm run dev\" \"npm run electron\"",
     "build": "tsc -b && vite build",
+    "build:electron": "npm run build && electron-builder build --win --x64",
     "lint": "oxlint",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.ollalink.agent",
+    "productName": "Ollalink Agent",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": ["portable"]
+    }
   },
   "dependencies": {
     "convex": "^1.42.3",
@@ -25,6 +36,7 @@
     "concurrently": "^10.0.4",
     "cross-env": "^10.1.0",
     "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",

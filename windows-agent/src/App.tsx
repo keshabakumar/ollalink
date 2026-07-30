@@ -13,13 +13,23 @@ function App() {
   const agentHeartbeat = useMutation('devices:agentHeartbeat' as any);
 
   useEffect(() => {
+    let currentStats;
     // @ts-ignore
     if (window.electron) {
       // @ts-ignore
-      setStats(window.electron.getSystemStats());
+      currentStats = window.electron.getSystemStats();
+      setStats(currentStats);
+      
+      // Auto-pair if code is provided via CLI and not already connected
+      // @ts-ignore
+      const code = window.electron.getPairingCode();
+      if (code && !localStorage.getItem('deviceToken')) {
+        setPairingCode(code);
+        doPairing(code, currentStats);
+      }
     } else {
       // Fallback for browser (non-Electron) environment
-      setStats({
+      currentStats = {
         hostname: location.hostname || 'browser-agent',
         platform: navigator.platform || 'web',
         release: navigator.userAgent.match(/Windows NT [\d.]+|Mac OS X [\d._]+|Linux/)?.[0] || 'unknown',
@@ -27,7 +37,8 @@ function App() {
         freemem: 0,
         cpus: [],
         uptime: 0,
-      });
+      };
+      setStats(currentStats);
     }
   }, []);
 
@@ -50,17 +61,16 @@ function App() {
     return () => clearInterval(interval);
   }, [deviceToken]);
 
-  const handlePair = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doPairing = async (code: string, sysStats: any) => {
     setError('');
     setStatus('Pairing...');
     try {
-      if (!stats) throw new Error("System stats not available yet");
+      if (!sysStats) throw new Error("System stats not available yet");
       
       const res = await pairAgent({
-        pairingCode,
-        hostname: stats.hostname,
-        os: `${stats.platform} ${stats.release}`,
+        pairingCode: code,
+        hostname: sysStats.hostname,
+        os: `${sysStats.platform} ${sysStats.release}`,
         agentVersion: '1.0.0',
       }) as any;
       
@@ -71,6 +81,11 @@ function App() {
       setError(err.message || 'Failed to pair');
       setStatus('Waiting for pairing...');
     }
+  };
+
+  const handlePair = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await doPairing(pairingCode, stats);
   };
 
   const handleDisconnect = () => {

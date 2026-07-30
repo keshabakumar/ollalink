@@ -34,7 +34,8 @@ export default function DevicesPage() {
     setPending(true);
     try {
       const res = await generatePairingCode({ workspaceId: current });
-      const command = `Invoke-WebRequest -Uri "https://ollalink.com/install.ps1" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -PairingCode "${res.pairingCode}"`;
+      const scriptUrl = `${window.location.origin}/install.ps1`;
+      const command = `Invoke-WebRequest -Uri "${scriptUrl}" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -PairingCode "${res.pairingCode}"`;
       await navigator.clipboard.writeText(command);
       toast.success("Install command copied to clipboard!");
     } catch {
