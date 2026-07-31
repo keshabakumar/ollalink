@@ -1,4 +1,88 @@
-# Session Log — Ollalink Auth Debugging
+# Session Log — Ollalink
+
+## Date: 2026-07-31 (Current Session)
+
+### Discussion
+1. **Reviewed session state:** Read `session.md` and `ROADMAP.md` to determine the next task.
+2. **Identified next task:** Named Cloudflare tunnel is the gate for Google OAuth + Polar + stable URLs.
+3. **Established workflow preference:** Update `session.md` after every reply (saved to `/memories/preferences.md`).
+4. **Researched Windows agent codebase:** Explored both agent codebases (Electron + Rust), backend device functions, relay, and web viewer.
+5. **User provided 8-phase commercial SaaS roadmap:** Asked which phase the project is currently in.
+6. **Phase analysis:** Verified codebase against all 8 phases. Conclusion: end of Phase 1, beginning Phase 2/3.
+7. **User requested honest re-plan for Phase 2:** "without AI hallucination and honest with me."
+8. **Honest re-examination:** Electron agent had no reconnection/auto-start/service mode/sysinfo-sending; Rust agent was non-functional placeholder (never compiled); backend had no offline detection.
+9. **Executed Phase 2 plan (13 steps, all completed):**
+
+### What Was Done — Phase 2 Implementation
+
+**Step 1 — Fix `.env` to prod:**
+- `windows-agent/.env`: Changed `VITE_CONVEX_URL` from dev (`fantastic-emu-179`) to prod (`good-kingfisher-535`).
+
+**Steps 2-4 — Electron agent reliability + sysinfo (`App.tsx`, `preload.cjs`):**
+- Added **token validation on startup**: on launch, if `localStorage.deviceToken` exists, immediately call `agentHeartbeat`. If it fails with "Invalid device token", clear token and return to pairing screen.
+- Added **reconnection with exponential backoff**: 5s→10s→20s→40s→60s cap. Resets to 30s baseline on success. After 5 consecutive failures, shows "Connection lost" + re-pair button.
+- Added **real system info collection**: `preload.cjs` now has `getSystemStatsAsync()` that computes CPU usage % (from `os.cpus()` idle/total deltas, 1s sampling), fetches public IP (from `https://api.ipify.org`), and gets local IP (from `os.networkInterfaces()`). Sent in every heartbeat.
+- Added **agentOffline on disconnect/unload**: `beforeunload` handler + disconnect/re-pair buttons call `devices:agentOffline` mutation.
+
+**Steps 5, 9-11 — Backend offline detection + sysinfo storage (`devices.ts`, `schema.ts`, `crons.ts`, `convex.config.ts`):**
+- Extended `devices` schema with `cpuUsage`, `memUsage`, `uptime` optional fields + new `by_status_lastseen` index.
+- Extended `agentHeartbeat` mutation to accept and store `cpuUsage`, `memUsage`, `uptime`, `ipAddress`.
+- Added `agentOffline` mutation: agent calls on graceful shutdown to set status "offline" immediately.
+- Added `markStaleDevicesOffline` internal mutation: cron runs every 60s, marks devices offline if `lastSeenAt < now - 90s` (3 missed heartbeats).
+- Created `packages/backend/convex/crons.ts` and registered in `convex.config.ts`.
+
+**Steps 6-8 — Auto-start + minimized launch + tray menu (`main.cjs`, `preload.cjs`):**
+- Added auto-start via `app.setLoginItemSettings({ openAtLogin: true, args: ['--minimized'] })` — no admin rights needed.
+- Added `--minimized` CLI flag: when passed, window is created but never shown (starts in tray).
+- Added tray menu toggle "Start with Windows" (checkbox) that calls `setLoginItemSettings`.
+- Auto-start is enabled automatically after first successful pairing.
+- IPC handlers: `autostart:enable`, `autostart:disable`, `autostart:get` — exposed to renderer via preload.
+
+**Step 12 — Dashboard live sysinfo (`devices/page.tsx`):**
+- Added "System" column to devices table showing CPU% bar, RAM% bar, and uptime for online devices.
+- Offline/pairing devices show "—" in the System column.
+
+**Step 13 — Archive Rust agent:**
+- Moved `apps/agent-win/` → `apps/agent-win-archive/`. The Rust code was non-functional placeholder (infinite sleep loop, gradient generator, empty service stub) that had never been compiled. Kept as reference for Phase 3 (DXGI capture + H.264), to be written from scratch.
+
+### Files Modified
+- `windows-agent/.env` — prod Convex URL
+- `windows-agent/src/App.tsx` — token validation, backoff reconnection, sysinfo sending, agentOffline, auto-start enable
+- `windows-agent/electron/preload.cjs` — `getSystemStatsAsync()` with CPU%/IP, auto-start IPC bridge
+- `windows-agent/electron/main.cjs` — auto-start, `--minimized` flag, tray menu with toggle
+- `packages/backend/convex/schema.ts` — `cpuUsage`, `memUsage`, `uptime` fields + `by_status_lastseen` index
+- `packages/backend/convex/devices.ts` — extended `agentHeartbeat`, added `agentOffline`, added `markStaleDevicesOffline`
+- `packages/backend/convex/crons.ts` — new, offline-detection cron (60s interval)
+- `packages/backend/convex/convex.config.ts` — registered crons
+- `apps/app/src/app/[locale]/(dashboard)/devices/page.tsx` — live CPU/RAM/uptime display
+
+### Files Moved
+- `apps/agent-win/` → `apps/agent-win-archive/` (non-functional Rust placeholder)
+
+### Next Steps
+- Deploy backend to prod (`npx convex deploy`) to activate the new schema fields, mutations, and cron.
+- Build the Electron agent (`npm run build:electron` in `windows-agent/`) and test end-to-end: pair → heartbeat → dashboard shows live sysinfo → kill agent → device goes offline after 90s.
+- Test auto-start: pair → reboot → agent launches silently in tray.
+- Phase 3 (Remote Desktop Engine) is next: real DXGI capture + H.264 + WebRTC, written from scratch.
+
+---
+
+## Date: 2026-07-30
+
+### What Was Done
+
+### What Was Done
+1. **Windows Agent Installer:**
+   - Created a PowerShell installation script (`install.ps1`) for the Windows Agent.
+   - Fixed Vercel deployment Next.js routing where `install.ps1` was blocked by the Convex authentication middleware (intercepted and redirected to `/login`). Bypassed middleware for `/install.ps1`.
+2. **Electron Agent Fixes:**
+   - Fixed a blank white screen issue in the production `.exe` by setting `base: './'` in `vite.config.ts`.
+3. **Phase 2 Implementation (Dashboard Analytics & Audit Logs):**
+   - Implemented an `Analytics & Logs` page in the web dashboard.
+   - Refactored `devices.ts` in the Convex backend to use the `audit()` helper for tracking when devices are paired, connected, or deleted.
+   - Displayed active devices and a full audit trail in the dashboard UI using existing `audit.recent` queries.
+   
+---
 
 ## Date: 2026-07-23
 

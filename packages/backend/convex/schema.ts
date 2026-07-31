@@ -73,11 +73,15 @@ export default defineSchema({
     ipAddress: v.optional(v.string()),
     agentVersion: v.optional(v.string()),
     lastSeenAt: v.optional(v.number()),
+    cpuUsage: v.optional(v.number()),
+    memUsage: v.optional(v.number()),
+    uptime: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_workspace", ["workspaceId"])
     .index("by_pairing_code", ["pairingCode"])
-    .index("by_device_token", ["deviceToken"]),
+    .index("by_device_token", ["deviceToken"])
+    .index("by_status_lastseen", ["status", "lastSeenAt"]),
 
   deviceSessions: defineTable({
     workspaceId: v.id("workspaces"),

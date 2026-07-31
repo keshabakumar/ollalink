@@ -100,6 +100,7 @@ export default function DevicesPage() {
                 <th className="px-4 py-3 font-medium">Device Name</th>
                 <th className="px-4 py-3 font-medium">OS / IP</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">System</th>
                 <th className="px-4 py-3 font-medium">Last Seen</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
@@ -107,19 +108,19 @@ export default function DevicesPage() {
             <tbody>
               {devices === undefined && (
                 <tr>
-                  <td className="px-4 py-6 text-primary/40" colSpan={5}>
+                  <td className="px-4 py-6 text-primary/40" colSpan={6}>
                     Loading devices…
                   </td>
                 </tr>
               )}
               {devices !== undefined && devices.length === 0 && (
                 <tr>
-                  <td className="px-4 py-6 text-primary/40" colSpan={5}>
+                  <td className="px-4 py-6 text-primary/40" colSpan={6}>
                     No devices paired yet — click “Pair New Agent” to link a Windows machine.
                   </td>
                 </tr>
               )}
-              {devices?.map((device: { _id: Id<"devices">, name: string, status: string, os?: string, ipAddress?: string, lastSeenAt?: number }) => (
+              {devices?.map((device: { _id: Id<"devices">, name: string, status: string, os?: string, ipAddress?: string, lastSeenAt?: number, cpuUsage?: number, memUsage?: number, uptime?: number }) => (
                 <tr
                   key={device._id}
                   className="border-b border-border/50 last:border-0 hover:bg-muted/30"
@@ -143,6 +144,37 @@ export default function DevicesPage() {
                     >
                       {device.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-primary/60">
+                    {device.status === "online" ? (
+                      <div className="flex flex-col gap-1">
+                        {device.cpuUsage != null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-8">CPU</span>
+                            <div className="h-1.5 w-16 rounded-full bg-primary/10 overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: `${Math.min(device.cpuUsage, 100)}%` }} />
+                            </div>
+                            <span>{device.cpuUsage}%</span>
+                          </div>
+                        )}
+                        {device.memUsage != null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-8">RAM</span>
+                            <div className="h-1.5 w-16 rounded-full bg-primary/10 overflow-hidden">
+                              <div className="h-full bg-green-500" style={{ width: `${Math.min(device.memUsage, 100)}%` }} />
+                            </div>
+                            <span>{device.memUsage}%</span>
+                          </div>
+                        )}
+                        {device.uptime != null && (
+                          <span className="text-primary/40">
+                            up {device.uptime < 3600 ? `${Math.floor(device.uptime / 60)}m` : `${Math.floor(device.uptime / 3600)}h ${Math.floor((device.uptime % 3600) / 60)}m`}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-primary/30">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-primary/50">
                     {device.lastSeenAt 

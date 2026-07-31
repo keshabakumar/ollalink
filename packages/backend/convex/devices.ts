@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { requireMember } from "./orgs";
 import { audit } from "./auditLog";
 
@@ -131,8 +131,11 @@ export const agentHeartbeat = mutation({
   args: {
     deviceToken: v.string(),
     ipAddress: v.optional(v.string()),
+    cpuUsage: v.optional(v.number()),
+    memUsage: v.optional(v.number()),
+    uptime: v.optional(v.number()),
   },
-  handler: async (ctx, { deviceToken, ipAddress }) => {
+  handler: async (ctx, { deviceToken, ipAddress, cpuUsage, memUsage, uptime }) => {
     const device = await ctx.db
       .query("devices")
       .withIndex("by_device_token", (q) => q.eq("deviceToken", deviceToken))
@@ -144,6 +147,9 @@ export const agentHeartbeat = mutation({
       status: "online",
       lastSeenAt: Date.now(),
       ...(ipAddress ? { ipAddress } : {}),
+      ...(cpuUsage != null ? { cpuUsage } : {}),
+      ...(memUsage != null ? { memUsage } : {}),
+      ...(uptime != null ? { uptime } : {}),
     });
 
     // Check if there is an active session pending for this device
@@ -157,6 +163,36 @@ export const agentHeartbeat = mutation({
       status: "ok",
       activeSessionId: activeSession ? activeSession._id : null,
     };
+  },
+});
+
+/** Called by the agent on graceful shutdown to mark the device offline immediately. */
+export const agentOffline = mutation({
+  args: { deviceToken: v.string() },
+  handler: async (ctx, { deviceToken }) => {
+    const device = await ctx.db
+      .query("devices")
+      .withIndex("by_device_token", (q) => q.eq("deviceToken", deviceToken))
+      .first();
+    if (!device) return;
+    await ctx.db.patch(device._id, { status: "offline" });
+  },
+});
+
+/** Internal cron: mark devices offline if they haven't heartbeated in 90s. */
+export const markStaleDevicesOffline = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - 90_000;
+    const stale = await ctx.db
+      .query("devices")
+      .withIndex("by_status_lastseen", (q) =>
+        q.eq("status", "online").lt("lastSeenAt", cutoff),
+      )
+      .collect();
+    for (const device of stale) {
+      await ctx.db.patch(device._id, { status: "offline" });
+    }
   },
 });
 
