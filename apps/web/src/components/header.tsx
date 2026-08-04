@@ -12,24 +12,40 @@ import Image from "next/image";
 import Link from "next/link";
 import { SubscribeForm } from "./subscribe-form";
 
+const NAV = [
+  { href: "/#features", label: "Features" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/#faq", label: "FAQ" },
+];
+
 export function Header() {
   return (
     <header className="absolute top-0 w-full flex items-center justify-between p-4 z-10">
-      <span className="hidden md:block text-sm font-medium">convex-v1.run</span>
-
-      <Link href="/">
+      <Link href="/" className="flex items-center gap-2">
         <Image
           src="/logo.png"
-          alt="V1 logo"
-          width={60}
+          alt="Ollalink logo"
+          width={32}
+          height={32}
           quality={100}
-          height={60}
-          className="md:absolute md:left-1/2 md:top-5 md:-translate-x-1/2"
         />
+        <span className="hidden md:block text-sm font-medium">Ollalink</span>
       </Link>
 
+      <nav className="hidden md:flex items-center gap-6 text-sm text-primary/70">
+        {NAV.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className="hover:text-primary transition-colors"
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
       <nav className="md:mt-2">
-        <ul className="flex items-center gap-4">
+        <ul className="flex items-center gap-3">
           <li>
             <a
               href={process.env.NEXT_PUBLIC_APP_URL}
@@ -40,10 +56,12 @@ export function Header() {
           </li>
           <li>
             <a
-              href="https://github.com/get-convex/v1"
-              className="text-sm px-4 py-2 bg-primary text-secondary rounded-full font-medium"
+              href="https://github.com/ollalink/ollalink"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm px-4 py-2 border border-border rounded-full font-medium hover:bg-primary/5"
             >
-              Github
+              GitHub
             </a>
           </li>
           <li>
@@ -58,14 +76,13 @@ export function Header() {
                 <DialogHeader>
                   <DialogTitle>Stay updated</DialogTitle>
                   <DialogDescription>
-                    Subscribe to our newsletter to get the latest news and
-                    updates.
+                    Subscribe to our newsletter to get the latest news and updates.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex flex-col gap-4">
                   <SubscribeForm
-                    group="v1-newsletter"
+                    group="ollalink-newsletter"
                     placeholder="Email address"
                   />
                 </div>

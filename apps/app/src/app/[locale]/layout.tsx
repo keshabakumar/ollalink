@@ -9,8 +9,8 @@ import { ThemeProvider } from "next-themes";
 import { ConvexClientProvider } from "../convex-client-provider";
 
 export const metadata: Metadata = {
-  title: "Create v1",
-  description: "Production ready Next.js app",
+  title: "Ollalink Dashboard",
+  description: "Manage devices, run jobs, and audit everything in your Ollalink workspace.",
 };
 
 export const viewport = {

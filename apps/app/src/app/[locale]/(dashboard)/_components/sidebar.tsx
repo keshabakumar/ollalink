@@ -21,6 +21,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@v1/ui/select";
 import { ThemeSwitcher } from "./theme-switcher";
 
 const NAV = [
@@ -43,26 +50,34 @@ export function Sidebar() {
   const Body = (
     <div className="flex h-full w-60 flex-col border-r border-border bg-card">
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <Image src="/logo.png" alt="logo" width={26} height={26} />
-        <span className="font-mono text-sm font-medium text-primary">myos</span>
+        <Image src="/logo.png" alt="Ollalink logo" width={26} height={26} />
+        <span className="font-mono text-sm font-medium text-primary">Ollalink</span>
       </div>
 
       <div className="p-3">
-        <span className="mb-1 block text-[10px] uppercase tracking-wide text-primary/40">
+        <span className="mb-1.5 block text-[10px] uppercase tracking-wide text-primary/40">
           Workspace
         </span>
-        <select
+        <Select
           value={current ?? ""}
-          onChange={(e) => select(e.target.value as Id<"workspaces">)}
-          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+          onValueChange={(value) => select(value as Id<"workspaces">)}
+          disabled={workspaces.length === 0 || user === undefined}
         >
-          {workspaces.length === 0 && <option>…</option>}
-          {workspaces.map((w) => (
-            <option key={w._id} value={w._id}>
-              {w.name} ({w.role})
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full text-sm">
+            <SelectValue
+              placeholder={
+                workspaces.length === 0 ? "Loading…" : "Select workspace"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {workspaces.map((w) => (
+              <SelectItem key={w._id} value={w._id}>
+                {w.name} ({w.role})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-1">
@@ -91,7 +106,13 @@ export function Sidebar() {
       <div className="border-t border-border p-3">
         <div className="mb-2 flex items-center gap-2">
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+            <Image
+              src={user.avatarUrl}
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+            />
           ) : (
             <span className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-lime-400 via-cyan-300 to-blue-500" />
           )}
@@ -120,8 +141,8 @@ export function Sidebar() {
         <button type="button" aria-label="Open menu" onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" />
         </button>
-        <Image src="/logo.png" alt="logo" width={22} height={22} />
-        <span className="font-mono text-sm font-medium">myos</span>
+        <Image src="/logo.png" alt="Ollalink logo" width={22} height={22} />
+        <span className="font-mono text-sm font-medium">Ollalink</span>
       </div>
 
       <aside className="sticky top-0 hidden h-screen shrink-0 md:block">{Body}</aside>

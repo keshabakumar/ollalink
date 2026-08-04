@@ -31,6 +31,7 @@
     "./tooltip": "./src/components/tooltip.tsx",
     "./switch": "./src/components/switch.tsx",
     "./dialog": "./src/components/dialog.tsx",
+    "./skeleton": "./src/components/skeleton.tsx",
     "./icons": "./src/components/icons.tsx",
     "./scroll-area": "./src/components/scroll-area.tsx",
     "./upload-input": "./src/components/upload-input.tsx",

@@ -5,7 +5,7 @@
  */
 export const projectConfig = {
   /** Used for branding + the @scope of workspace packages (rename via setup notes). */
-  name: "myos",
+  name: "Ollalink",
 
   /** Where the stack runs — a LAN IP or a domain. setup.sh injects this as $HOST. */
   host: "10.1.30.14",

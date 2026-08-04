@@ -2,13 +2,14 @@
 
 
 <p align="center">
-	<h1 align="center"><b>Create v1</b></h1>
+	<h1 align="center"><b>Ollalink</b></h1>
 <p align="center">
-    An open-source starter kit based on an <a href="https://v1.run">open-source starter kit</a> by <a href="https://midday.ai">Midday</a>. Ported to <a href="https://convex.dev">Convex</a>.
+    A multi-tenant operations platform for remote device management, background jobs, and audit trails.
+    Built with <a href="https://nextjs.org">Next.js</a> and <a href="https://convex.dev">Convex</a>.
     <br />
     <br />
-    <a href="https://convex-v1.run"><strong>Website</strong></a> ·
-    <a href="https://github.com/get-convex/v1/issues"><strong>Issues</strong></a> ·
+    <a href="https://ollalink.io"><strong>Website</strong></a> ·
+    <a href="https://github.com/ollalink/ollalink/issues"><strong>Issues</strong></a> ·
     <a href="#whats-included"><strong>What's included</strong></a> ·
     <a href="#prerequisites"><strong>Prerequisites</strong></a> ·
     <a href="#getting-started"><strong>Getting Started</strong></a> ·
@@ -16,9 +17,13 @@
   </p>
 </p>
 
-Everything you need to build a production ready SaaS, it's an opinionated stack
-using Convex and the latest Next.js framework, a monorepo with a focus on code
-reuse and best practices that will grow with your business.
+Ollalink gives you everything you need to operate a distributed team: multi-tenant workspaces,
+remote device agents, durable background jobs, file storage, audit logging, and billing — in an
+opinionated monorepo that grows with your business.
+
+> **Note:** This project evolved from the <a href="https://v1.run">v1</a> starter kit by
+> <a href="https://midday.ai">Midday</a>, ported to Convex. It is now being developed as
+> Ollalink.
 
 ## What's included
 
@@ -74,29 +79,45 @@ To install Bun, please follow the official installation instructions:
 
 ## Getting Started
 
-You have two options to create a new v1 project:
+You can set up Ollalink locally with Bun and a Convex backend.
 
-### Option 1: Using the CLI (Recommended)
-
-To create a new v1 project using our CLI tool, run:
+### Clone the repository
 
 ```bash
-bun create @convex-dev/v1@latest
+git clone https://github.com/ollalink/ollalink.git
+cd ollalink
 ```
 
-This command will guide you through the process of setting up your project, including:
+### Install dependencies
 
-1. Creating a new directory for your project
-2. Cloning the v1 repository
-3. Installing dependencies
-4. Initializing a git repository
-5. Setting up the Convex backend
-6. Configuring authentication
-7. Setting up environment variables
-8. Adding test products to Polar
-9. Seeding the database for subscriptions
+```bash
+bun install
+```
 
-After the setup is complete, you can start your development server by running:
+### Set up environment variables
+
+Copy the example environment files and fill in your values:
+
+```bash
+cp apps/app/.env.example apps/app/.env.local
+cp apps/web/.env.example apps/web/.env.local
+```
+
+### Configure Convex
+
+Set up your Convex project and deploy the schema:
+
+```bash
+npx convex dev
+```
+
+### Run the apps
+
+```bash
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) for the marketing site and [http://localhost:3001](http://localhost:3001) for the dashboard (ports may vary).
 
 ```bash
 cd your-project-name

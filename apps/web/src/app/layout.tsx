@@ -15,10 +15,10 @@ const DepartureMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://convex-v1.run"),
-  title: "Create v1",
+  metadataBase: new URL("https://ollalink.io"),
+  title: "Ollalink — Device management, jobs, and audit for teams",
   description:
-    "A free, open-source starter kit for your next project, built with insights from Midday.",
+    "Ollalink gives you multi-tenant workspaces, remote devices, background jobs, and a complete audit trail — all in one place.",
 };
 
 export default function RootLayout({

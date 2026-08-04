@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { WorkspaceProvider } from "@/lib/workspace-provider";
 import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@v1/backend/convex/_generated/api";

@@ -7,12 +7,14 @@ import { NotificationsBell } from "./notifications-bell";
 const APP_VERSION = "0.1.0";
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
+  "/analytics": "Analytics & Logs",
   "/jobs": "Jobs",
   "/devices": "Devices",
   "/platform": "Platform",
   "/files": "Files",
   "/settings": "Settings",
   "/settings/billing": "Billing",
+  "/notifications": "Notifications",
 };
 
 export function Topbar() {
@@ -21,7 +23,7 @@ export function Topbar() {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-6">
       <nav className="flex items-center gap-1.5 text-sm">
-        <span className="text-primary/40">myos</span>
+        <span className="text-primary/40">Ollalink</span>
         <span className="text-primary/30">/</span>
         <span className="font-medium text-primary/80">{title}</span>
       </nav>
@@ -29,7 +31,7 @@ export function Topbar() {
         <NotificationsBell />
         <span className="hidden sm:inline">v{APP_VERSION}</span>
         <a
-          href="https://github.com/get-convex/v1/tree/main/docs"
+          href="https://docs.ollalink.io"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-1.5 hover:text-primary"

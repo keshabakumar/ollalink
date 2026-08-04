@@ -1,10 +1,8 @@
 "use client";
 
-import { api } from "@v1/backend/convex/_generated/api";
 import { Button } from "@v1/ui/button";
 import { Icons } from "@v1/ui/icons";
 import { Input } from "@v1/ui/input";
-import { useAction } from "convex/react";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -12,7 +10,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" className="ml-auto rounded-full">
+    <Button type="submit" className="ml-auto rounded-full" disabled={pending}>
       {pending ? <Icons.Loader className="size-4" /> : "Subscribe"}
     </Button>
   );
@@ -25,7 +23,6 @@ type Props = {
 };
 
 export function SubscribeForm({ group, placeholder, className }: Props) {
-  const subscribe = useAction(api.web.subscribe);
   const [isSubmitted, setSubmitted] = useState(false);
 
   return (
@@ -52,11 +49,14 @@ export function SubscribeForm({ group, placeholder, className }: Props) {
           <form
             className="flex flex-col gap-4"
             action={async (formData) => {
+              const email = formData.get("email") as string;
+              // TODO: wire to a real mailing-list provider (Resend, ConvertKit, etc.)
+              // For now, open a pre-filled email so the user can capture signups manually.
+              window.open(
+                `mailto:hello@ollalink.io?subject=${encodeURIComponent(`Subscribe: ${group}`)}&body=${encodeURIComponent(`Add ${email} to the ${group} list.`)}`,
+                "_blank",
+              );
               setSubmitted(true);
-              await subscribe({
-                email: formData.get("email") as string,
-                userGroup: group,
-              });
 
               setTimeout(() => {
                 setSubmitted(false);

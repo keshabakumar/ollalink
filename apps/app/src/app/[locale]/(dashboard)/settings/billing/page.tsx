@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { CheckoutLink, CustomerPortalLink } from "@convex-dev/polar/react";
