@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { audit } from "./auditLog";
@@ -33,5 +34,23 @@ export const recent = query({
       .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .order("desc")
       .take(50);
+  },
+});
+
+/** Paginated audit feed for large workspaces. */
+export const recentPaged = query({
+  args: {
+    workspaceId: v.id("workspaces"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, { workspaceId, paginationOpts }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { page: [], isDone: true, continueCursor: "" };
+    await requireMember(ctx, userId, workspaceId);
+    return ctx.db
+      .query("auditLogs")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .order("desc")
+      .paginate(paginationOpts);
   },
 });

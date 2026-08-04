@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
@@ -34,6 +35,19 @@ export const myNotifications = query({
   },
 });
 
+export const myNotificationsPaged = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { page: [], isDone: true, continueCursor: "" };
+    return ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .paginate(paginationOpts);
+  },
+});
+
 export const unreadCount = query({
   args: {},
   handler: async (ctx) => {
@@ -54,11 +68,23 @@ export const markAllRead = mutation({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return;
-    const unread = await ctx.db
+    // Process unread notifications in bounded batches to avoid unbounded .collect().
+    const batchSize = 100;
+    let unread = await ctx.db
       .query("notifications")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("read"), false))
-      .collect();
-    for (const n of unread) await ctx.db.patch(n._id, { read: true });
+      .withIndex("by_user_read", (q) => q.eq("userId", userId).eq("read", false))
+      .take(batchSize);
+    while (unread.length > 0) {
+      for (const n of unread) {
+        await ctx.db.patch(n._id, { read: true });
+      }
+      if (unread.length < batchSize) break;
+      unread = await ctx.db
+        .query("notifications")
+        .withIndex("by_user_read", (q) =>
+          q.eq("userId", userId).eq("read", false),
+        )
+        .take(batchSize);
+    }
   },
 });
