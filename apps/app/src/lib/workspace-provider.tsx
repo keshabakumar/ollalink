@@ -35,15 +35,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setCurrent((prev) => {
-      if (prev && workspaces.some((w) => w._id === prev)) return prev;
+      if (prev && workspaces.some((w) => (w._id as unknown as string) === (prev as unknown as string))) return prev;
       const saved = typeof window !== "undefined" ? window.localStorage.getItem("ws") : null;
-      const match = workspaces.find((w) => w._id === saved);
-      return match?._id ?? workspaces[0]?._id ?? prev;
+      const match = workspaces.find((w) => (w._id as unknown as string) === saved);
+      return (match?._id as unknown as Id<"workspaces">) ?? workspaces[0]?._id ?? prev;
     });
   }, [workspaces, ensure, ensuring]);
 
   const select = (id: Id<"workspaces">) => {
-    if (typeof window !== "undefined") window.localStorage.setItem("ws", id);
+    if (typeof window !== "undefined") window.localStorage.setItem("ws", id as unknown as string);
     setCurrent(id);
   };
 

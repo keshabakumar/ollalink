@@ -2,12 +2,24 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { asyncMap } from "convex-helpers";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { polar } from "./subscriptions";
 import { username } from "./utils/validators";
 
+export type UserView = {
+  _id: Id<"users">;
+  name?: string;
+  username?: string;
+  email?: string;
+  image?: string;
+  imageId?: Id<"_storage">;
+  subscription: unknown;
+  avatarUrl?: string;
+};
+
 export const getUser = query({
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<UserView | undefined> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       return;
@@ -27,7 +39,7 @@ export const getUser = query({
       avatarUrl: user.imageId
         ? await ctx.storage.getUrl(user.imageId)
         : undefined,
-    };
+    } as UserView;
   },
 });
 

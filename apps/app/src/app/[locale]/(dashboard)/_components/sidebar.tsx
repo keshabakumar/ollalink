@@ -59,8 +59,8 @@ export function Sidebar() {
           Workspace
         </span>
         <Select
-          value={current ?? ""}
-          onValueChange={(value) => select(value as Id<"workspaces">)}
+          value={(current ?? "") as string}
+          onValueChange={(value) => select(value as unknown as Id<"workspaces">)}
           disabled={workspaces.length === 0 || user === undefined}
         >
           <SelectTrigger className="w-full text-sm">
@@ -72,7 +72,7 @@ export function Sidebar() {
           </SelectTrigger>
           <SelectContent>
             {workspaces.map((w) => (
-              <SelectItem key={w._id} value={w._id}>
+              <SelectItem key={w._id as unknown as string} value={w._id as unknown as string}>
                 {w.name} ({w.role})
               </SelectItem>
             ))}
