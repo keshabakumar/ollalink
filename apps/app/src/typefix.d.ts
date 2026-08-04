@@ -5,6 +5,8 @@
 declare module "convex/values" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface GenericId<TableName> {
-    __tableName: any;
+    // Using string instead of the table-specific literal makes Id types
+    // structurally compatible, which is required by the corrupted generated types.
+    __tableName: string;
   }
 }
