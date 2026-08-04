@@ -2,8 +2,8 @@
 # Prove the full Jobs loop on the VM: create -> running -> done (via backend webhook).
 set -uo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
 
 echo "=== resolve a userId ==="
 USERID="$("$NODE" "$CVX" run jobs:firstUserId 2>&1 | tail -1 | tr -d '"[:space:]')"

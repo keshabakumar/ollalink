@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Deploy audit-log wiring + member management; verify audit rows are written.
 set -uo pipefail
-NODE=/usr/bin/node; CVX=/opt/myos/node_modules/convex/bin/main.js
+NODE=/usr/bin/node; CVX=/opt/ollalink/node_modules/convex/bin/main.js
 for f in auditLog audit jobs orgs apiKeys files; do
-  cp "/tmp/$f.ts" "/opt/myos/packages/backend/convex/$f.ts"
+  cp "/tmp/$f.ts" "/opt/ollalink/packages/backend/convex/$f.ts"
 done
-cd /opt/myos/packages/backend
+cd /opt/ollalink/packages/backend
 echo "=== deploy ==="
 "$NODE" "$CVX" deploy -y 2>&1 | tail -3
 echo "=== exercise audited actions ==="

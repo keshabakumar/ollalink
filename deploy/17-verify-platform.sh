@@ -2,8 +2,8 @@
 # Verify all Phase 2 platform modules end-to-end on the VM.
 set -uo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
 USERID="$("$NODE" "$CVX" run jobs:firstUserId 2>&1 | tail -1 | tr -d '"[:space:]')"
 echo "userId: $USERID"
 

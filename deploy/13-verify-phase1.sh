@@ -2,9 +2,9 @@
 # Prove all three hybrid paths end-to-end on the VM.
 set -uo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
-set -a; . /opt/myos/backend-echo/.env; set +a
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
+set -a; . /opt/ollalink/backend-echo/.env; set +a
 
 echo "=== PROXY PATH: Convex action -> echo backend (service key + userId) ==="
 "$NODE" "$CVX" run backend:callBackendInternal \
@@ -12,7 +12,7 @@ echo "=== PROXY PATH: Convex action -> echo backend (service key + userId) ==="
 
 echo
 echo "=== DIRECT PATH: external backend verifies Convex JWT via JWKS ==="
-EMAIL="phase1@myos.test"
+EMAIL="phase1@ollalink.test"
 OUT="$("$NODE" "$CVX" run auth:signIn "{\"provider\":\"resend-otp\",\"params\":{\"email\":\"$EMAIL\"}}" 2>&1)"
 CODE="$(printf '%s\n' "$OUT" | grep -oE "OTP for $EMAIL: [0-9]+" | grep -oE '[0-9]+$' | tail -1)"
 TOK="$("$NODE" "$CVX" run auth:signIn "{\"provider\":\"resend-otp\",\"params\":{\"email\":\"$EMAIL\",\"code\":\"$CODE\"}}" 2>&1 | grep -oE '"token": "[^"]+"' | head -1 | sed 's/"token": "//; s/"$//')"

@@ -2,14 +2,14 @@
 # Route auth emails to local Mailpit via nodemailer (Node SMTP action). Prove one lands.
 set -uo pipefail
 export PATH=$HOME/.bun/bin:$PATH
-N=/usr/bin/node; C=/opt/myos/node_modules/convex/bin/main.js
+N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
 echo "=== add nodemailer ==="
-( cd /opt/myos/packages/backend && bun add nodemailer 2>&1 | tail -2 )
-cp /tmp/email.ts             /opt/myos/packages/backend/convex/email.ts
-cp /tmp/ResendOTP.ts         /opt/myos/packages/backend/convex/ResendOTP.ts
-cp /tmp/passwordProviders.ts /opt/myos/packages/backend/convex/passwordProviders.ts
-rm -f /opt/myos/packages/backend/convex/nodetest.ts
-cd /opt/myos/packages/backend
+( cd /opt/ollalink/packages/backend && bun add nodemailer 2>&1 | tail -2 )
+cp /tmp/email.ts             /opt/ollalink/packages/backend/convex/email.ts
+cp /tmp/ResendOTP.ts         /opt/ollalink/packages/backend/convex/ResendOTP.ts
+cp /tmp/passwordProviders.ts /opt/ollalink/packages/backend/convex/passwordProviders.ts
+rm -f /opt/ollalink/packages/backend/convex/nodetest.ts
+cd /opt/ollalink/packages/backend
 echo "=== set SMTP env (-> Mailpit) ==="
 "$N" "$C" env set SMTP_HOST 10.1.30.14 >/dev/null && echo "SMTP_HOST set"
 "$N" "$C" env set SMTP_PORT 1025 >/dev/null && echo "SMTP_PORT set"
@@ -17,7 +17,7 @@ echo "=== set SMTP env (-> Mailpit) ==="
 echo "=== deploy ==="
 "$N" "$C" deploy -y 2>&1 | tail -3
 echo "=== trigger a signup -> verification email ==="
-EM="mailtest$(date +%s)@myos.test"
+EM="mailtest$(date +%s)@ollalink.test"
 echo "to: $EM"
 "$N" "$C" run auth:signIn "{\"provider\":\"password\",\"params\":{\"email\":\"$EM\",\"password\":\"MailTest#2026\",\"flow\":\"signUp\"}}" >/dev/null 2>&1
 sleep 5

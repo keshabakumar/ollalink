@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Clone the get-convex/v1 template into /opt/myos on the VM and install deps.
+# Clone the Ollalink repo into /opt/ollalink on the VM and install deps.
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
 
-APP_DIR=/opt/myos
+APP_DIR=/opt/ollalink
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
 if [ -z "$(ls -A "$APP_DIR" 2>/dev/null)" ]; then
-  echo "=== degit get-convex/v1 ==="
-  bunx degit get-convex/v1 .
+  echo "=== clone ollalink/ollalink ==="
+  git clone https://github.com/ollalink/ollalink.git .
 else
-  echo "=== /opt/myos not empty, skipping clone ==="
+  echo "=== /opt/ollalink not empty, skipping clone ==="
 fi
 
 echo "=== bun install ==="

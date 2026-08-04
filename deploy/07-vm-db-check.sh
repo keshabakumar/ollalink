@@ -12,8 +12,8 @@ if [ ! -x "$NODE" ]; then
 fi
 echo "node: $($NODE --version) at $NODE"
 
-cd /opt/myos/packages/backend
-CVX=/opt/myos/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== tables (before) ==="
 "$NODE" "$CVX" data || true

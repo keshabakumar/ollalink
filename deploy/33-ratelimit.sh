@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Deploy tuned auth (5 failed/hr) and PROVE brute-force lockout on password sign-in.
 set -uo pipefail
-N=/usr/bin/node; C=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
+N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
 echo "=== deploy auth (maxFailedAttempsPerHour=5) ==="
-cp /tmp/auth.ts /opt/myos/packages/backend/convex/auth.ts
+cp /tmp/auth.ts /opt/ollalink/packages/backend/convex/auth.ts
 "$N" "$C" deploy -y 2>&1 | tail -2
 
 mkacct() {
@@ -18,7 +18,7 @@ signin() {
   echo "$r" | grep -qE '"token"' && echo OK || echo FAIL
 }
 
-A="rla$$@myos.test"; B="rlb$$@myos.test"
+A="rla$$@ollalink.test"; B="rlb$$@ollalink.test"
 echo "=== control account A ==="; mkacct "$A"
 echo "A: correct password (expect OK): $(signin "$A" "Correct#2026")"
 

@@ -2,7 +2,7 @@
 # Self-hosted error monitoring: GlitchTip (Sentry-protocol compatible) + a CF tunnel
 # so the remote browser AND the VM can reach it with one public DSN.
 set -uo pipefail
-SH=/opt/myos/glitchtip
+SH=/opt/ollalink/glitchtip
 mkdir -p "$SH"; cd "$SH"
 
 echo "=== cloudflared tunnel for :8000 ==="
@@ -87,5 +87,5 @@ for i in $(seq 1 80); do
 done
 docker compose ps
 [ "$ok" = "1" ] || { echo "WEB NOT UP"; docker compose logs --tail=30 web; exit 1; }
-printf '%s\n' "$GURL" > /opt/myos/glitchtip/url.txt
+printf '%s\n' "$GURL" > /opt/ollalink/glitchtip/url.txt
 echo "GLITCHTIP_UP_DONE url=$GURL"

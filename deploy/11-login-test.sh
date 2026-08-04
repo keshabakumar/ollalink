@@ -3,10 +3,10 @@
 # confirm a session + user were created.
 set -uo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
 
-EMAIL="phase0-login@myos.test"
+EMAIL="phase0-login@ollalink.test"
 
 echo "=== step 1: request code ==="
 OUT="$("$NODE" "$CVX" run auth:signIn "{\"provider\":\"resend-otp\",\"params\":{\"email\":\"$EMAIL\"}}" 2>&1)"

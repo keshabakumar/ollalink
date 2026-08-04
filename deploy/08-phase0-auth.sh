@@ -3,19 +3,19 @@
 # deploy backend (Node), and check the JWKS/OIDC endpoints. Run under Node (Bun ws bug #390).
 set -euo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== sync changed source files into place ==="
-cp /tmp/ResendOTP.ts         /opt/myos/packages/backend/convex/ResendOTP.ts
-cp /tmp/auth.ts              /opt/myos/packages/backend/convex/auth.ts
-cp /tmp/email-otp-signin.tsx /opt/myos/apps/app/src/components/email-otp-signin.tsx
-cp /tmp/login_page.tsx      "/opt/myos/apps/app/src/app/[locale]/(public)/login/page.tsx"
+cp /tmp/ResendOTP.ts         /opt/ollalink/packages/backend/convex/ResendOTP.ts
+cp /tmp/auth.ts              /opt/ollalink/packages/backend/convex/auth.ts
+cp /tmp/email-otp-signin.tsx /opt/ollalink/apps/app/src/components/email-otp-signin.tsx
+cp /tmp/login_page.tsx      "/opt/ollalink/apps/app/src/app/[locale]/(public)/login/page.tsx"
 echo "ok"
 
-cd /opt/myos/packages/backend
+cd /opt/ollalink/packages/backend
 
 echo "=== generate JWT keys ==="
-"$NODE" /opt/myos/generateKeys.mjs
+"$NODE" /opt/ollalink/generateKeys.mjs
 JWT_PRIVATE_KEY="$(cat /tmp/jwt_private_key)"
 JWKS="$(cat /tmp/jwks)"
 

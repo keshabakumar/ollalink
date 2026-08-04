@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Maintained counters for dashboard.stats (O(1)) + backfill existing workspaces.
 set -uo pipefail
-N=/usr/bin/node; C=/opt/myos/node_modules/convex/bin/main.js
+N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
 for f in schema counters dashboard jobs files orgs; do
-  cp "/tmp/$f.ts" "/opt/myos/packages/backend/convex/$f.ts"
+  cp "/tmp/$f.ts" "/opt/ollalink/packages/backend/convex/$f.ts"
 done
-cd /opt/myos/packages/backend
+cd /opt/ollalink/packages/backend
 echo "=== deploy ==="
 "$N" "$C" deploy -y 2>&1 | tail -3
 echo "=== backfill counters from existing rows ==="

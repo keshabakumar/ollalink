@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "=== myos-app (systemd MainPID 2087095) + children ==="
+echo "=== ollalink-app (systemd MainPID 2087095) + children ==="
 ps -o pid,ppid,rss,args -p 2087095 2>/dev/null
 for p in $(pgrep -P 2087095 2>/dev/null); do ps -o pid,ppid,rss,args -p "$p"; done
 echo ""

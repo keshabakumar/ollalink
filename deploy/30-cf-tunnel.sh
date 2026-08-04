@@ -35,6 +35,6 @@ CVX=$(journalctl -u cf-cvx --no-pager -n 60 2>/dev/null | grep -oE 'https://[a-z
 echo "APP_URL=$APP"
 echo "CVX_URL=$CVX"
 # persist for later scripts
-printf 'APP_URL=%s\nCVX_URL=%s\n' "$APP" "$CVX" > /opt/myos/.tunnel-urls
+printf 'APP_URL=%s\nCVX_URL=%s\n' "$APP" "$CVX" > /opt/ollalink/.tunnel-urls
 echo "cf-app=$(systemctl is-active cf-app) cf-cvx=$(systemctl is-active cf-cvx)"
 echo CF_TUNNEL_DONE

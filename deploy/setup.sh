@@ -11,7 +11,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 HOST="${HOST:-$(hostname -I | awk '{print $1}')}"
-echo "==> Installing $(basename "$REPO") for HOST=$HOST"
+echo "==> Installing Ollalink for HOST=$HOST"
 export DEBIAN_FRONTEND=noninteractive
 
 echo "==> [1/9] toolchain (docker, node, bun, git)"
@@ -93,9 +93,9 @@ EOF
 ( cd "$REPO/apps/app" && "$NODE" "$NEXT" build )
 
 echo "==> [9/9] systemd services"
-cat > /etc/systemd/system/myos-app.service <<UNIT
+cat > /etc/systemd/system/ollalink-app.service <<UNIT
 [Unit]
-Description=dashboard (Next.js)
+Description=Ollalink dashboard (Next.js)
 After=network.target docker.service
 [Service]
 WorkingDirectory=$REPO/apps/app
@@ -107,9 +107,9 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 UNIT
-cat > /etc/systemd/system/myos-echo.service <<UNIT
+cat > /etc/systemd/system/ollalink-echo.service <<UNIT
 [Unit]
-Description=echo reference backend
+Description=Ollalink echo reference backend
 After=network.target
 [Service]
 WorkingDirectory=$REPO/backend-echo
@@ -120,11 +120,12 @@ Restart=always
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now myos-app.service myos-echo.service
+systemctl enable --now ollalink-app.service ollalink-echo.service
 
 echo
 echo "==> DONE for HOST=$HOST"
 echo "    Dashboard:        http://${HOST}:3000"
+echo "    Marketing site:   http://${HOST}:3001"
 echo "    Convex dashboard: http://${HOST}:6791  (deployment URL http://${HOST}:3210)"
 echo "    Admin key:        $(grep CONVEX_SELF_HOSTED_ADMIN_KEY "$REPO/packages/backend/.env.local" | cut -d= -f2-)"
 echo "    (Sign-in OTP is logged to the Convex dashboard until RESEND_API_KEY is set.)"

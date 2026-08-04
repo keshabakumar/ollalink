@@ -3,10 +3,10 @@
 # Regenerate so JWT_PRIVATE_KEY and JWKS remain a matched keypair, then set both.
 set -uo pipefail
 NODE=/usr/bin/node
-CVX=/opt/myos/node_modules/convex/bin/main.js
-cd /opt/myos/packages/backend
+CVX=/opt/ollalink/node_modules/convex/bin/main.js
+cd /opt/ollalink/packages/backend
 
-"$NODE" /opt/myos/generateKeys.mjs
+"$NODE" /opt/ollalink/generateKeys.mjs
 JWT_PRIVATE_KEY="$(cat /tmp/jwt_private_key)"
 JWKS="$(cat /tmp/jwks)"
 

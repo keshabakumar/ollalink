@@ -4,7 +4,7 @@
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
 VM_IP=10.1.30.14
-cd /opt/myos
+cd /opt/ollalink
 
 echo "=== apps/app/.env ==="
 cat > apps/app/.env <<EOF

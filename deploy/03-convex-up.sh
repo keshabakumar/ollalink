@@ -5,7 +5,7 @@ set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
 
 VM_IP=10.1.30.14
-SH_DIR=/opt/myos/self-hosted
+SH_DIR=/opt/ollalink/self-hosted
 mkdir -p "$SH_DIR"
 cd "$SH_DIR"
 
@@ -41,8 +41,8 @@ ADMIN_KEY=$(docker compose exec -T backend ./generate_admin_key.sh 2>/dev/null |
 [ -n "$ADMIN_KEY" ] || { echo "FAILED to capture admin key"; exit 1; }
 echo "admin key captured (length ${#ADMIN_KEY})"
 
-echo "=== write /opt/myos/packages/backend/.env.local ==="
-cat > /opt/myos/packages/backend/.env.local <<EOF
+echo "=== write /opt/ollalink/packages/backend/.env.local ==="
+cat > /opt/ollalink/packages/backend/.env.local <<EOF
 # Convex CLI -> local self-hosted backend on this VM.
 CONVEX_SELF_HOSTED_URL='http://127.0.0.1:3210'
 CONVEX_SELF_HOSTED_ADMIN_KEY='${ADMIN_KEY}'

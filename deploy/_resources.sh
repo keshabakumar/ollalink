@@ -12,9 +12,9 @@ echo "===== DOCKER disk usage ====="
 docker system df
 echo ""
 echo "===== BUILD / DISK SIZES ====="
-du -sh /opt/myos/apps/app/.next 2>/dev/null
-du -sh /opt/myos/node_modules 2>/dev/null
-du -sh /opt/myos 2>/dev/null
+du -sh /opt/ollalink/apps/app/.next 2>/dev/null
+du -sh /opt/ollalink/node_modules 2>/dev/null
+du -sh /opt/ollalink 2>/dev/null
 echo "----- docker volumes -----"
 docker system df -v 2>/dev/null | sed -n '/VOLUME NAME/,/^$/p' | head -20
 echo ""

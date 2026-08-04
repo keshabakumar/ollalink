@@ -18,5 +18,5 @@ echo "=== remaining next-server procs ==="
 ps -eo pid,rss,args | grep -F "next-server" | grep -v grep
 echo ""
 echo "=== NEW BASELINE: memory ==="; free -h
-echo "=== app still serving? ==="; systemctl is-active myos-app; curl -s -o /dev/null -w "app /en/login: %{http_code}\n" http://localhost:3000/en/login
+echo "=== app still serving? ==="; systemctl is-active ollalink-app; curl -s -o /dev/null -w "app /en/login: %{http_code}\n" http://localhost:3000/en/login
 echo CLEANUP_DONE
