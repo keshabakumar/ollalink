@@ -86,6 +86,20 @@ contextBridge.exposeInMainWorld('electron', {
       publicIp,
     };
   },
+  captureScreenFrame: async () => {
+    try {
+      const { desktopCapturer, screen } = require('electron');
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1280, height: 720 } });
+      if (!sources.length) return new ArrayBuffer(0);
+      const source = sources[0];
+      const thumbnail = source.thumbnail;
+      const buffer = thumbnail.toPNG();
+      return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    } catch (err) {
+      console.error('[Capture] Failed to capture screen frame', err);
+      return new ArrayBuffer(0);
+    }
+  },
   getPairingCode: () => {
     const args = process.argv;
     const pairingCodeArgIndex = args.findIndex(arg => arg.toLowerCase() === '-pairingcode' || arg.toLowerCase() === '--pairing-code');

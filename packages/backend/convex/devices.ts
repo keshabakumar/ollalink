@@ -166,6 +166,25 @@ export const agentHeartbeat = mutation({
   },
 });
 
+export const pollAgentSession = query({
+  args: { deviceToken: v.string() },
+  handler: async (ctx, { deviceToken }) => {
+    const device = await ctx.db
+      .query("devices")
+      .withIndex("by_device_token", (q) => q.eq("deviceToken", deviceToken))
+      .first();
+    if (!device) throw new Error("Invalid device token");
+
+    const activeSession = await ctx.db
+      .query("deviceSessions")
+      .withIndex("by_device", (q) => q.eq("deviceId", device._id))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+
+    return activeSession ? activeSession._id : null;
+  },
+});
+
 /** Called by the agent on graceful shutdown to mark the device offline immediately. */
 export const agentOffline = mutation({
   args: { deviceToken: v.string() },

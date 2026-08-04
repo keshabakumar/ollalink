@@ -13,13 +13,90 @@ function App() {
   const [stats, setStats] = useState<any>(null);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
+  const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
   const pairAgent = useMutation('devices:pairAgent' as any);
   const agentHeartbeat = useMutation('devices:agentHeartbeat' as any);
   const agentOffline = useMutation('devices:agentOffline' as any);
+  const pollAgentSession = useMutation('devices:pollAgentSession' as any);
 
   const tokenRef = useRef(deviceToken);
   tokenRef.current = deviceToken;
+  const consecutiveFailuresRef = useRef(0);
+  const currentAgentSessionRef = useRef<string | null>(null);
+  const agentWsRef = useRef<WebSocket | null>(null);
+  const agentFrameTimerRef = useRef<number | null>(null);
+
+  const cleanupAgentSession = () => {
+    if (agentWsRef.current) {
+      agentWsRef.current.close();
+      agentWsRef.current = null;
+    }
+    if (agentFrameTimerRef.current) {
+      window.clearTimeout(agentFrameTimerRef.current);
+      agentFrameTimerRef.current = null;
+    }
+    currentAgentSessionRef.current = null;
+    setAgentSessionId(null);
+  };
+
+  const connectAgentSession = async (sessionId: string) => {
+    if (!sessionId || !window.electron) return;
+    if (currentAgentSessionRef.current === sessionId) return;
+
+    cleanupAgentSession();
+
+    const relayUrl = import.meta.env.VITE_RELAY_URL || 'ws://localhost:8080';
+    const ws = new WebSocket(`${relayUrl}?sessionId=${sessionId}&role=agent`);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      console.log('[Agent] Connected to Relay Server', sessionId);
+      currentAgentSessionRef.current = sessionId;
+      setAgentSessionId(sessionId);
+      sendAgentFrame();
+    };
+
+    ws.onmessage = async (event) => {
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          console.log('[Agent] Viewer command', msg);
+        } catch (e) {
+          console.error('[Agent] Invalid viewer message', e);
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('[Agent] Relay disconnected', sessionId);
+      cleanupAgentSession();
+    };
+
+    ws.onerror = (err) => {
+      console.error('[Agent] Relay connection error', err);
+      cleanupAgentSession();
+    };
+
+    agentWsRef.current = ws;
+  };
+
+  const sendAgentFrame = async () => {
+    const ws = agentWsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    try {
+      // @ts-ignore
+      const frame = await window.electron.captureScreenFrame();
+      if (frame instanceof ArrayBuffer || ArrayBuffer.isView(frame)) {
+        ws.send(frame);
+      }
+    } catch (err) {
+      console.error('[Agent] Failed to capture screen frame', err);
+    }
+
+    agentFrameTimerRef.current = window.setTimeout(sendAgentFrame, 200);
+  };
 
   // --- Send agentOffline on page unload (graceful shutdown) ---
   useEffect(() => {
@@ -62,11 +139,15 @@ function App() {
         const res = await agentHeartbeat({
           deviceToken: stored,
           ...(sysStats?.publicIp ? { ipAddress: sysStats.publicIp } : {}),
-        });
+        }) as any;
         if (cancelled) return;
+        consecutiveFailuresRef.current = 0;
         setConsecutiveFailures(0);
-        setStatus('Connected');
+        setStatus(res.activeSessionId ? 'Streaming' : 'Connected');
         if (sysStats) setStats(sysStats);
+        if (res.activeSessionId) {
+          connectAgentSession(res.activeSessionId);
+        }
       } catch (err: any) {
         if (cancelled) return;
         const msg = err?.message || '';
@@ -93,25 +174,45 @@ function App() {
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
+    const pollSession = async () => {
+      if (cancelled || !tokenRef.current) return;
+      try {
+        const activeSessionId = await pollAgentSession({ deviceToken: tokenRef.current }) as any;
+        if (cancelled) return;
+        if (activeSessionId) {
+          setStatus('Streaming');
+          connectAgentSession(activeSessionId);
+        }
+      } catch {
+        // ignore transient polling failures
+      }
+    };
+
     const beat = async () => {
       if (cancelled || !tokenRef.current) return;
 
       try {
         // @ts-ignore
         const sysStats = window.electron ? await window.electron.getSystemStatsAsync() : null;
-        await agentHeartbeat({
+        const res = await agentHeartbeat({
           deviceToken: tokenRef.current,
           ...(sysStats?.publicIp ? { ipAddress: sysStats.publicIp } : {}),
-        });
+        }) as any;
         if (cancelled) return;
+        consecutiveFailuresRef.current = 0;
         setConsecutiveFailures(0);
-        setStatus('Connected');
+        setStatus(res.activeSessionId ? 'Streaming' : 'Connected');
         if (sysStats) setStats(sysStats);
+        if (res.activeSessionId) {
+          connectAgentSession(res.activeSessionId);
+        }
+        await pollSession();
         // Reset to baseline 30s on success
         timer = setTimeout(beat, 30000);
       } catch (err: any) {
         if (cancelled) return;
-        const failures = consecutiveFailures + 1;
+        const failures = consecutiveFailuresRef.current + 1;
+        consecutiveFailuresRef.current = failures;
         setConsecutiveFailures(failures);
 
         if (failures >= MAX_CONSECUTIVE_FAILURES) {
@@ -152,8 +253,13 @@ function App() {
       
       setDeviceToken(res.deviceToken);
       localStorage.setItem('deviceToken', res.deviceToken);
+      consecutiveFailuresRef.current = 0;
       setConsecutiveFailures(0);
       setStatus('Connected');
+      if (res.activeSessionId) {
+        setStatus('Streaming');
+        connectAgentSession(res.activeSessionId);
+      }
       // Enable auto-start after first successful pairing
       // @ts-ignore
       if (window.electron?.enableAutoStart) {

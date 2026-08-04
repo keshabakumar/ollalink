@@ -17,7 +17,7 @@
         "typescript": "^5.5.4",
       },
     },
-    "apps/agent-win": {
+    "apps/agent-win-archive": {
       "name": "@v1/agent-win",
       "version": "0.1.0",
     },
@@ -843,7 +843,7 @@
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
-    "@v1/agent-win": ["@v1/agent-win@workspace:apps/agent-win"],
+    "@v1/agent-win": ["@v1/agent-win@workspace:apps/agent-win-archive"],
 
     "@v1/analytics": ["@v1/analytics@workspace:packages/analytics"],
 
