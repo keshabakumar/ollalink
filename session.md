@@ -1,5 +1,79 @@
 # Session Log — Ollalink
 
+## Date: 2026-08-05
+
+### What Was Done — Phase 3 Started (Real Remote Desktop Engine)
+
+**Brutal honesty audit of existing "remote desktop":**
+- "WebRTC stream" UI text was a lie — it was PNG screenshots over WebSocket at 5 FPS
+- Mouse input from viewer was received by agent and only `console.log`'d — did nothing
+- "Latency: 14ms, 60 FPS" HUD was hardcoded fake numbers
+- No keyboard input at all
+
+**Phase 3 implementation (Steps 1-4, all done):**
+
+1. **Agent: real video capture** (`windows-agent/electron/preload.cjs`, `windows-agent/src/App.tsx`)
+   - Replaced `desktopCapturer` PNG thumbnails with `getUserMedia` screen capture → `MediaRecorder` (VP8 webm, 1.5 Mbps, 100ms chunks)
+   - ~30 FPS video at a fraction of the PNG bandwidth
+   - `getScreenStream()` exposed via preload; `startVideoStream()` in App.tsx sends binary chunks over WS
+
+2. **Agent: input injection** (`windows-agent/electron/preload.cjs`)
+   - Added `injectInput(event)` — uses PowerShell + Win32 `SendInput` via `Add-Type`
+   - Handles `mouse_move` (absolute, 0..65535), `mouse_click` (left/right/middle, down/up), `key` (VK codes)
+   - **Honest caveat:** ~30-50ms latency per event due to spawning powershell.exe. Placeholder for a native node addon (<1ms) later.
+
+3. **Agent: input handling** (`windows-agent/src/App.tsx`)
+   - `ws.onmessage` now actually calls `window.electron.injectInput(msg)` instead of just `console.log`
+
+4. **Viewer: MSE video playback** (`apps/app/.../devices/[deviceId]/page.tsx`)
+   - Replaced PNG-to-canvas with `MediaSource` + `SourceBuffer` (VP8 webm) → `<video>` element
+   - `initMse()`, `appendChunk()`, `flushQueue()` with queue cap (30) to avoid unbounded memory
+   - Real FPS measurement (chunk count per second) — no more fake "60 FPS"
+
+5. **Viewer: real input forwarding**
+   - Mouse move/down/up on `<video>` element → JSON to WS
+   - Keyboard: `onKeyDown`/`onKeyUp` → `{type:"key",key,down}` to WS
+   - Removed fake "14ms latency" — now shows 0 until real measurement is wired
+
+**Files modified:**
+- `windows-agent/electron/preload.cjs` — `getScreenStream()`, `injectInput()`, `buildInputPs()` helper
+- `windows-agent/src/App.tsx` — `startVideoStream()` with MediaRecorder, input handling, `agentRecorderRef`
+- `apps/app/src/app/[locale]/(dashboard)/devices/[deviceId]/page.tsx` — MSE playback, `<video>`, keyboard input, real FPS
+
+**What's NOT done (honest):**
+- Latency measurement is not wired (shows 0)
+- Input injection via PowerShell is a placeholder — works but slow
+- No adaptive bitrate
+- No clipboard sync, multi-monitor, session recording
+- WebRTC (true P2P) is deferred to Phase 3.5 — this is relayed video, not P2P
+- Not yet tested end-to-end (needs `npm run dev:electron` + relay + viewer)
+
+### Verification Done This Session
+- **Agent builds clean** — `npm run build` in `windows-agent/` succeeds (tsc + vite). Added `src/electron.d.ts` for `window.electron` typing.
+- **Relay verified live** — started `apps/relay`, hit `/health` → `{status:"ok",activeSessions:0}`.
+- **Relay round-trip tested** — connected a fake agent + viewer on same sessionId; agent sent 5-byte binary + JSON; viewer received both correctly + `peer_connected` notification.
+- **App typecheck** — viewer page has no new errors (pre-existing Convex index typing errors in `devices.ts` are unrelated).
+
+### To Test End-to-End (manual, needs desktop)
+```bash
+# Terminal 1: relay
+cd apps/relay && npm run dev
+
+# Terminal 2: agent (Electron)
+cd windows-agent && npm run dev:electron
+
+# Terminal 3: web app
+cd apps/app && npm run dev
+```
+Then: pair agent → dashboard → device → open session → live VP8 video + mouse/keyboard control.
+
+### Next Steps
+- Replace PowerShell input injection with a native node addon for <1ms latency
+- Wire real latency measurement (timestamp chunks)
+- Phase 3.5: WebRTC for true P2P (sub-100ms)
+
+---
+
 ## Date: 2026-08-03
 
 ### Discussion

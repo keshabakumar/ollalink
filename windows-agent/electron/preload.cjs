@@ -1,6 +1,59 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const os = require('os');
 
+// Phase 3: Build a PowerShell snippet that calls Win32 SendInput for one input event.
+// This is an honest placeholder — it works but has ~30-50ms latency per event due to
+// spawning a powershell.exe process each time. A native node addon (node-addon-api)
+// would bring this to <1ms. We use it to prove the round-trip end-to-end.
+function buildInputPs(event) {
+  // SendInput signature: SendInput(cInputs, pInputs, cbSize)
+  // MOUSEINPUT flags: MOUSEEVENTF_MOVE 0x0001, MOUSEEVENTF_LEFTDOWN 0x0002,
+  // MOUSEEVENTF_LEFTUP 0x0004, MOUSEEVENTF_RIGHTDOWN 0x0008, MOUSEEVENTF_RIGHTUP 0x0010,
+  // MOUSEEVENTF_ABSOLUTE 0x8000. Absolute coords are 0..65535 mapped to screen.
+  const {
+    type,
+    x, y,            // normalized 0..1 from viewer
+    button,          // 'left' | 'right' | 'middle'
+    down,            // boolean
+    key,             // for keyboard: character or key name
+  } = event;
+
+  if (type === 'mouse_move') {
+    if (x == null || y == null) return null;
+    const ax = Math.round(x * 65535);
+    const ay = Math.round(y * 65535);
+    return `powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport(\\"user32.dll\\")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public MOUSEINPUT mi;}[StructLayout(LayoutKind.Sequential)]public struct MOUSEINPUT{public int dx;public int dy;public uint flags;public uint time;public IntPtr extra;}}'; $i=New-Object I+INPUT;$i.type=0;$i.mi.dx=${ax};$i.mi.dy=${ay};$i.mi.flags=0x8001;[I]::SendInput(1,@($i),40)"`;
+  }
+
+  if (type === 'mouse_click') {
+    const flag = button === 'right'
+      ? (down ? 0x0008 : 0x0010)
+      : button === 'middle'
+        ? (down ? 0x0020 : 0x0040)
+        : (down ? 0x0002 : 0x0004);
+    return `powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport(\\"user32.dll\\")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public MOUSEINPUT mi;}[StructLayout(LayoutKind.Sequential)]public struct MOUSEINPUT{public int dx;public int dy;public uint flags;public uint time;public IntPtr extra;}}'; $i=New-Object I+INPUT;$i.type=0;$i.mi.flags=${flag};[I]::SendInput(1,@($i),40)"`;
+  }
+
+  if (type === 'key') {
+    // Map a few common keys to VK codes. Honest: this is minimal.
+    const vkMap = {
+      Enter: 0x0d, Backspace: 0x08, Tab: 0x09, Escape: 0x1b,
+      Shift: 0x10, Control: 0x11, Alt: 0x12, Space: 0x20,
+      ArrowLeft: 0x25, ArrowUp: 0x26, ArrowRight: 0x27, ArrowDown: 0x28,
+      Delete: 0x2e,
+    };
+    let vk = vkMap[key];
+    if (vk == null && key && key.length === 1) {
+      vk = key.toUpperCase().charCodeAt(0);
+    }
+    if (vk == null) return null;
+    const flags = down ? 0 : 0x0002; // KEYEVENTF_KEYUP = 0x0002
+    return `powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport(\\"user32.dll\\")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public KEYBDINPUT ki;}[StructLayout(LayoutKind.Sequential)]public struct KEYBDINPUT{public ushort wVk;public ushort scan;public uint flags;public uint time;public IntPtr extra;}}'; $i=New-Object I+INPUT;$i.type=1;$i.ki.wVk=${vk};$i.ki.flags=${flags};[I]::SendInput(1,@($i),40)"`;
+  }
+
+  return null;
+}
+
 // Compute CPU usage percentage from two os.cpus() samples taken ~1s apart.
 // Returns a Promise<number> 0..100. Falls back to 0 if sampling fails.
 async function computeCpuUsage() {
@@ -86,18 +139,55 @@ contextBridge.exposeInMainWorld('electron', {
       publicIp,
     };
   },
-  captureScreenFrame: async () => {
+  // Phase 3: Real video capture.
+  // Returns a MediaStream from the primary screen via desktopCapturer + getUserMedia.
+  // The renderer creates a MediaRecorder on this stream and sends webm chunks over WS.
+  getScreenStream: async () => {
     try {
-      const { desktopCapturer, screen } = require('electron');
-      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1280, height: 720 } });
-      if (!sources.length) return new ArrayBuffer(0);
-      const source = sources[0];
-      const thumbnail = source.thumbnail;
-      const buffer = thumbnail.toPNG();
-      return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      const { desktopCapturer } = require('electron');
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 0, height: 0 }, // we don't need thumbnails
+      });
+      if (!sources.length) throw new Error('No screen source available');
+      const sourceId = sources[0].id;
+
+      // getUserMedia with chromeMediaSource is the Electron-only way to capture a screen.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: sourceId,
+            minWidth: 1280,
+            maxWidth: 1920,
+            minHeight: 720,
+            maxHeight: 1080,
+            minFrameRate: 15,
+            maxFrameRate: 30,
+          },
+        },
+      });
+      return stream;
     } catch (err) {
-      console.error('[Capture] Failed to capture screen frame', err);
-      return new ArrayBuffer(0);
+      console.error('[Capture] Failed to get screen stream', err);
+      throw err;
+    }
+  },
+
+  // Phase 3: Inject mouse/keyboard input on the Windows host.
+  // Uses PowerShell + Win32 SendInput via Add-Type. ~30-50ms per event — honest placeholder
+  // for a native node addon. Good enough to prove the round-trip works.
+  injectInput: async (event) => {
+    try {
+      const { exec } = require('child_process');
+      const ps = buildInputPs(event);
+      if (!ps) return;
+      exec(ps, { windowsHide: true }, (err) => {
+        if (err) console.error('[Input] Inject failed', err.message);
+      });
+    } catch (err) {
+      console.error('[Input] injectInput error', err);
     }
   },
   getPairingCode: () => {

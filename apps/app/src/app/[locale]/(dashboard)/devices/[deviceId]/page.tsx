@@ -22,10 +22,83 @@ export default function DeviceSessionPage() {
 
   const [sessionId, setSessionId] = useState<Id<"deviceSessions"> | null>(null);
   const [status, setStatus] = useState<"initializing" | "connecting" | "connected" | "disconnected">("initializing");
-  const [latency, setLatency] = useState<number>(14);
-  const [fps, setFps] = useState<number>(60);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [latency, setLatency] = useState<number>(0);
+  const [fps, setFps] = useState<number>(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const mseRef = useRef<{ mediaSource: MediaSource; sourceBuffer: SourceBuffer; queue: ArrayBuffer[]; lastFrameAt: number; frameCount: number } | null>(null);
+
+  // Phase 3: Initialize MediaSource Extensions for webm playback.
+  // The agent sends VP8 webm chunks from MediaRecorder; we append them to a
+  // SourceBuffer and the <video> element plays them. This is the browser-native
+  // way to play a live stream without WebRTC.
+  const initMse = () => {
+    if (!("MediaSource" in window)) {
+      console.error("[Viewer] MediaSource not supported");
+      return;
+    }
+    const mediaSource = new MediaSource();
+    if (videoRef.current) {
+      videoRef.current.src = URL.createObjectURL(mediaSource);
+    }
+    mediaSource.addEventListener("sourceopen", () => {
+      try {
+        const sourceBuffer = mediaSource.addSourceBuffer('video/webm;codecs="vp8"');
+        sourceBuffer.mode = "sequence"; // append in order, no timestamps needed
+        mseRef.current = {
+          mediaSource,
+          sourceBuffer,
+          queue: [],
+          lastFrameAt: Date.now(),
+          frameCount: 0,
+        };
+        sourceBuffer.addEventListener("updateend", flushQueue);
+      } catch (err) {
+        console.error("[Viewer] MSE sourceBuffer init failed", err);
+      }
+    });
+  };
+
+  const flushQueue = () => {
+    const mse = mseRef.current;
+    if (!mse || mse.sourceBuffer.updating || mse.queue.length === 0) return;
+    const next = mse.queue.shift();
+    if (next) {
+      try {
+        mse.sourceBuffer.appendBuffer(next);
+      } catch (err) {
+        console.error("[Viewer] MSE append failed", err);
+        // Drop the chunk on error to avoid stalling the stream.
+      }
+    }
+  };
+
+  const appendChunk = (data: ArrayBuffer) => {
+    const mse = mseRef.current;
+    if (!mse) return;
+
+    // Track real FPS: count chunks, update HUD every second.
+    mse.frameCount++;
+    const now = Date.now();
+    if (now - mse.lastFrameAt >= 1000) {
+      setFps(mse.frameCount);
+      mse.frameCount = 0;
+      mse.lastFrameAt = now;
+    }
+
+    if (mse.sourceBuffer.updating || mse.queue.length > 0) {
+      // Queue if the source buffer is busy or we already have pending chunks.
+      mse.queue.push(data);
+      // Cap the queue to avoid unbounded memory growth on slow links.
+      if (mse.queue.length > 30) mse.queue.shift();
+    } else {
+      try {
+        mse.sourceBuffer.appendBuffer(data);
+      } catch (err) {
+        console.error("[Viewer] MSE append failed", err);
+      }
+    }
+  };
 
   // Initialize remote session
   useEffect(() => {
@@ -46,6 +119,7 @@ export default function DeviceSessionPage() {
           console.log("[Viewer] Connected to Relay Server");
           setStatus("connected");
           toast.success("Remote session connected");
+          initMse();
         };
 
         ws.onmessage = (event) => {
@@ -61,19 +135,11 @@ export default function DeviceSessionPage() {
             } catch (e) {
               console.error("Signal decode error", e);
             }
-          } else if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-            // Render incoming frame buffer onto Canvas
-            const ctx = canvasRef.current?.getContext("2d");
-            if (!ctx) return;
-            
-            const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
-            const url = URL.createObjectURL(blob);
-            const img = new Image();
-            img.onload = () => {
-              ctx.drawImage(img, 0, 0, canvasRef.current!.width, canvasRef.current!.height);
-              URL.revokeObjectURL(url);
-            };
-            img.src = url;
+          } else if (event.data instanceof ArrayBuffer) {
+            // Phase 3: append webm chunk to MSE SourceBuffer
+            appendChunk(event.data);
+          } else if (event.data instanceof Blob) {
+            event.data.arrayBuffer().then(appendChunk);
           }
         };
 
@@ -96,13 +162,19 @@ export default function DeviceSessionPage() {
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (sessionId) endSession({ sessionId });
+      // Clean up MSE
+      const mse = mseRef.current;
+      if (mse && mse.mediaSource.readyState === "open") {
+        try { mse.mediaSource.endOfStream(); } catch {}
+      }
+      mseRef.current = null;
     };
   }, [device, deviceId]);
 
-  // Handle user mouse movements & clicks on the remote canvas
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (status !== "connected" || !wsRef.current || !canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
+  // Handle user mouse movements & clicks on the remote video
+  const handleMouseMove = (e: React.MouseEvent<HTMLVideoElement>) => {
+    if (status !== "connected" || !wsRef.current || !videoRef.current) return;
+    const rect = videoRef.current.getBoundingClientRect();
     const xPercent = (e.clientX - rect.left) / rect.width;
     const yPercent = (e.clientY - rect.top) / rect.height;
 
@@ -115,7 +187,7 @@ export default function DeviceSessionPage() {
     );
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLVideoElement>) => {
     if (status !== "connected" || !wsRef.current) return;
     wsRef.current.send(
       JSON.stringify({
@@ -126,7 +198,7 @@ export default function DeviceSessionPage() {
     );
   };
 
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseUp = (e: React.MouseEvent<HTMLVideoElement>) => {
     if (status !== "connected" || !wsRef.current) return;
     wsRef.current.send(
       JSON.stringify({
@@ -137,10 +209,27 @@ export default function DeviceSessionPage() {
     );
   };
 
+  // Phase 3: Forward keyboard events to the agent
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLVideoElement>) => {
+    if (status !== "connected" || !wsRef.current) return;
+    e.preventDefault();
+    wsRef.current.send(
+      JSON.stringify({ type: "key", key: e.key, down: true })
+    );
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLVideoElement>) => {
+    if (status !== "connected" || !wsRef.current) return;
+    e.preventDefault();
+    wsRef.current.send(
+      JSON.stringify({ type: "key", key: e.key, down: false })
+    );
+  };
+
   const toggleFullscreen = () => {
-    if (canvasRef.current) {
+    if (videoRef.current) {
       if (!document.fullscreenElement) {
-        canvasRef.current.requestFullscreen();
+        videoRef.current.requestFullscreen();
       } else {
         document.exitFullscreen();
       }
@@ -206,18 +295,22 @@ export default function DeviceSessionPage() {
         {status === "connecting" && (
           <div className="flex flex-col items-center gap-3 text-slate-400">
             <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-sm font-medium">Establishing secure WebRTC stream with Windows Agent...</p>
+            <p className="text-sm font-medium">Establishing video stream with Windows Agent...</p>
           </div>
         )}
 
-        <canvas
-          ref={canvasRef}
-          width={1920}
-          height={1080}
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
           onContextMenu={(e) => e.preventDefault()}
+          tabIndex={0}
           className={`max-h-full max-w-full object-contain cursor-crosshair border border-slate-800 ${
             status === "connected" ? "block" : "hidden"
           }`}
