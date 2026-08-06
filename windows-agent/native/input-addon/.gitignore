@@ -1,0 +1,3 @@
+# Native addon build artifacts (compiled .node binaries are ABI-specific,
+# rebuilt per-platform via npm run build in this folder).
+build/

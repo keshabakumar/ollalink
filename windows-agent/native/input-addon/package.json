@@ -1,0 +1,19 @@
+{
+  "name": "@ollalink/input-addon",
+  "version": "1.0.0",
+  "description": "Native Windows input injection (SendInput) for Ollalink agent. <1ms per event.",
+  "main": "index.js",
+  "gypfile": true,
+  "scripts": {
+    "build": "node-gyp configure && node-gyp build",
+    "rebuild": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.0"
+  }
+}

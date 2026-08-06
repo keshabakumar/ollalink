@@ -1,6 +1,39 @@
-# Ensures Convex auto-starts on Docker boot / VM reboot (merged with docker-compose.yml).
+# Merged with docker-compose.yml. Adds restart policies + a coturn TURN server
+# for WebRTC P2P relay (handles symmetric-NAT cases that STUN-only can't).
 services:
   backend:
     restart: unless-stopped
   dashboard:
     restart: unless-stopped
+
+  # coturn TURN/STUN server for WebRTC. Used by the Ollalink agent + viewer when
+  # STUN-only P2P fails (symmetric NAT, restrictive firewalls). Long-term credential
+  # auth: the agent/viewer pass turn:HOST:3478 + credentials.
+  # Ports: 3478 (UDP/TCP TURN), 5349 (TLS TURN), 49152-49162 (relay ports).
+  turn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    command:
+      - "--listening-port=3478"
+      - "--tls-listening-port=5349"
+      - "--realm=${TURN_REALM:-ollalink.local}"
+      - "--user=${TURN_USER:-ollalink}:${TURN_PASS:-ollalink-turn-secret}"
+      - "--lt-cred-mech"
+      - "--fingerprint"
+      - "--relay-ip=${TURN_RELAY_IP:-0.0.0.0}"
+      - "--min-port=49152"
+      - "--max-port=49162"
+      - "--no-cli"
+      - "--no-multicast-peers"
+      - "--no-loopback-peers"
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/tcp"
+      - "49152-49162:49152-49162/udp"
+    volumes:
+      - turn_data:/var/lib/coturn
+
+volumes:
+  data:
+  turn_data:

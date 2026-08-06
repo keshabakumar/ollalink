@@ -34,6 +34,12 @@ function App() {
   const agentRecorderRef = useRef<MediaRecorder | null>(null);
   const clipboardTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastClipboardRef = useRef<string>('');
+  // Phase 3.5: WebRTC P2P. The agent is the sender (it has the screen).
+  // Signaling flows over the existing relay WS — no relay changes needed.
+  // STUN-only (no TURN): ~80% P2P success; the rest fall back to MSE-over-WS.
+  const agentPcRef = useRef<RTCPeerConnection | null>(null);
+  const agentStreamRef = useRef<MediaStream | null>(null);
+  const agentP2pActiveRef = useRef<boolean>(false);
 
   const cleanupAgentSession = () => {
     if (agentWsRef.current) {
@@ -56,6 +62,13 @@ function App() {
       clearInterval(clipboardTimerRef.current);
       clipboardTimerRef.current = null;
     }
+    // Phase 3.5: tear down the WebRTC peer connection.
+    if (agentPcRef.current) {
+      try { agentPcRef.current.close(); } catch {}
+      agentPcRef.current = null;
+    }
+    agentStreamRef.current = null;
+    agentP2pActiveRef.current = false;
     lastClipboardRef.current = '';
     currentAgentSessionRef.current = null;
     setAgentSessionId(null);
@@ -76,6 +89,14 @@ function App() {
       currentAgentSessionRef.current = sessionId;
       setAgentSessionId(sessionId);
       await startVideoStream(ws);
+      // Phase 3.5: attempt WebRTC P2P. The screen stream is captured once and
+      // shared by both the MediaRecorder fallback and the RTCPeerConnection.
+      // If P2P connects, the viewer tells us and we stop the MediaRecorder.
+      try {
+        await startWebRTC(ws);
+      } catch (err) {
+        console.error('[Agent] WebRTC setup failed — staying on MSE fallback', err);
+      }
       // Phase 3: poll local clipboard every 1s and push changes to the viewer.
       if (clipboardTimerRef.current) clearInterval(clipboardTimerRef.current);
       lastClipboardRef.current = '';
@@ -126,6 +147,43 @@ function App() {
               console.error('[Agent] Input inject failed', err);
             }
           }
+          // Phase 3.5: WebRTC signaling — viewer answered our offer.
+          if (msg.type === 'webrtc_answer' && typeof msg.sdp === 'string') {
+            const pc = agentPcRef.current;
+            if (pc) {
+              try {
+                await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+                console.log('[Agent] WebRTC remote description set');
+              } catch (err) {
+                console.error('[Agent] setRemoteDescription failed', err);
+              }
+            }
+            return;
+          }
+          // Phase 3.5: WebRTC signaling — ICE candidate from viewer.
+          if (msg.type === 'webrtc_ice' && msg.candidate) {
+            const pc = agentPcRef.current;
+            if (pc) {
+              try {
+                await pc.addIceCandidate(msg.candidate);
+              } catch (err) {
+                console.error('[Agent] addIceCandidate failed', err);
+              }
+            }
+            return;
+          }
+          // Phase 3.5: viewer confirmed P2P track is playing — stop the
+          // MediaRecorder fallback to save bandwidth.
+          if (msg.type === 'webrtc_connected') {
+            agentP2pActiveRef.current = true;
+            const recorder = agentRecorderRef.current;
+            if (recorder && recorder.state === 'recording') {
+              try { recorder.stop(); } catch {}
+              agentRecorderRef.current = null;
+              console.log('[Agent] P2P active — stopped MSE fallback recorder');
+            }
+            return;
+          }
           // Phase 3: viewer pushed its clipboard → write to Windows clipboard.
           if (msg.type === 'set_clipboard' && typeof msg.text === 'string') {
             try {
@@ -155,6 +213,58 @@ function App() {
     agentWsRef.current = ws;
   };
 
+  // Phase 3.5: Set up WebRTC P2P. The agent is the sender — it adds the screen
+  // tracks to an RTCPeerConnection, creates an offer, and sends it over the relay
+  // WS. ICE candidates are trickled over the same WS. STUN by default; TURN added
+  // when VITE_TURN_URL is set (self-hosted coturn). If TURN is unset, symmetric-NAT
+  // cases silently fall back to MSE-over-WS.
+  const startWebRTC = async (ws: WebSocket) => {
+    // @ts-ignore
+    const stream: MediaStream = agentStreamRef.current || (await window.electron.getScreenStream());
+    agentStreamRef.current = stream;
+
+    const iceServers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+    // Optional TURN (self-hosted coturn). Env: VITE_TURN_URL=turn:host:3478?transport=tcp
+    // + VITE_TURN_USER + VITE_TURN_PASS. If unset, STUN-only (MSE fallback covers the rest).
+    const turnUrl = import.meta.env.VITE_TURN_URL as string | undefined;
+    if (turnUrl) {
+      iceServers.push({
+        urls: turnUrl,
+        username: import.meta.env.VITE_TURN_USER as string || 'ollalink',
+        credential: import.meta.env.VITE_TURN_PASS as string || 'ollalink-turn-secret',
+      });
+    }
+
+    const pc = new RTCPeerConnection({ iceServers });
+    agentPcRef.current = pc;
+
+    // Add screen tracks to the connection.
+    for (const track of stream.getVideoTracks()) {
+      pc.addTrack(track, stream);
+    }
+
+    // Trickle ICE candidates to the viewer over the relay WS.
+    pc.onicecandidate = (e) => {
+      if (e.candidate && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'webrtc_ice', candidate: e.candidate.toJSON() }));
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log('[Agent] WebRTC state:', pc.connectionState);
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        // P2P failed — the MSE fallback (MediaRecorder) is still running, so the
+        // viewer keeps getting video. No action needed here.
+        agentP2pActiveRef.current = false;
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(JSON.stringify({ type: 'webrtc_offer', sdp: offer.sdp }));
+    console.log('[Agent] WebRTC offer sent');
+  };
+
   // Phase 3: Real video capture via MediaRecorder.
   // Gets a MediaStream from the screen, records it as VP8 webm chunks,
   // and sends each chunk over the WebSocket as binary.
@@ -162,6 +272,7 @@ function App() {
     try {
       // @ts-ignore
       const stream: MediaStream = await window.electron.getScreenStream();
+      agentStreamRef.current = stream;
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8',
         videoBitsPerSecond: 1_500_000, // 1.5 Mbps — honest, adaptive later

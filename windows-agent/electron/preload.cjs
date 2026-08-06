@@ -175,20 +175,204 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
 
-  // Phase 3: Inject mouse/keyboard input on the Windows host.
-  // Uses PowerShell + Win32 SendInput via Add-Type. ~30-50ms per event — honest placeholder
-  // for a native node addon. Good enough to prove the round-trip works.
-  injectInput: async (event) => {
-    try {
-      const { exec } = require('child_process');
-      const ps = buildInputPs(event);
-      if (!ps) return;
-      exec(ps, { windowsHide: true }, (err) => {
-        if (err) console.error('[Input] Inject failed', err.message);
-      });
-    } catch (err) {
-      console.error('[Input] injectInput error', err);
+// Phase 3.5: Native input addon — calls Win32 SendInput directly (<1ms/event).
+// Loaded lazily; if the native binary is missing or fails to load (e.g. not
+// compiled for this Electron ABI), we fall back to the long-running PowerShell
+// path (~1-5ms). This is the honest priority order: native → PowerShell → legacy.
+let nativeInputAddon = null;
+let nativeInputTried = false;
+function loadNativeInput() {
+  if (nativeInputTried) return nativeInputAddon;
+  nativeInputTried = true;
+  try {
+    const path = require('path');
+    const addonPath = path.join(__dirname, '..', 'native', 'input-addon');
+    nativeInputAddon = require(addonPath);
+    console.log('[Input] Native addon loaded — <1ms/event path active');
+  } catch (err) {
+    console.log('[Input] Native addon unavailable, using PowerShell path:', err.message);
+    nativeInputAddon = null;
+  }
+  return nativeInputAddon;
+}
+
+// Phase 3.5: Long-running PowerShell input injector.
+// The previous approach spawned powershell.exe per event (~30-50ms each, mostly
+// process startup). This keeps ONE powershell.exe alive, loads the SendInput
+// type once, and reads newline-delimited event commands from stdin. Each event
+// is now a single stdin.write (~1-5ms). No native addon / build toolchain needed.
+//
+// The PowerShell side defines the I class (SendInput) once, then loops reading
+// stdin. Each line is a compact command: "M dx dy flags" (mouse) or "K vk flags"
+// (keyboard). We use a binary-ish line protocol to avoid per-event Add-Type cost.
+const INPUT_PS_SCRIPT = `
+$ErrorActionPreference = 'SilentlyContinue'
+Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport("user32.dll")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public MOUSEINPUT mi;[FieldOffset(8)]public KEYBDINPUT ki;}[StructLayout(LayoutKind.Sequential)]public struct MOUSEINPUT{public int dx;public int dy;public uint flags;public uint time;public IntPtr extra;}[StructLayout(LayoutKind.Sequential)]public struct KEYBDINPUT{public ushort wVk;public ushort scan;public uint flags;public uint time;public IntPtr extra;}}'
+$mi = New-Object I+MOUSEINPUT
+$ki = New-Object I+KEYBDINPUT
+$miInput = New-Object I+INPUT
+$kiInput = New-Object I+INPUT
+$miInput.type = 0
+$kiInput.type = 1
+while ($line = [Console]::In.ReadLine()) {
+  if (-not $line) { continue }
+  $parts = $line -split ' '
+  switch ($parts[0]) {
+    'M' {
+      $mi.dx = [int]$parts[1]
+      $mi.dy = [int]$parts[2]
+      $mi.flags = [uint32]$parts[3]
+      $miInput.mi = $mi
+      [I]::SendInput(1, @($miInput), 40) | Out-Null
     }
+    'K' {
+      $ki.wVk = [uint16]$parts[1]
+      $ki.flags = [uint32]$parts[2]
+      $kiInput.ki = $ki
+      [I]::SendInput(1, @($kiInput), 40) | Out-Null
+    }
+  }
+}
+`;
+
+let inputProc = null;
+let inputProcStarting = false;
+
+// Lazily spawn the long-running PowerShell injector. Returns the child process
+// or null if it couldn't start. We start it on first injectInput call and keep
+// it alive for the agent's lifetime.
+function getInputProc() {
+  if (inputProc && !inputProc.killed && inputProc.stdin && !inputProc.stdin.destroyed) {
+    return inputProc;
+  }
+  if (inputProcStarting) return null;
+  inputProcStarting = true;
+  try {
+    const { spawn } = require('child_process');
+    inputProc = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-NoLogo', '-Command', INPUT_PS_SCRIPT,
+    ], { windowsHide: true });
+    inputProc.stdin.setEncoding('utf8');
+    inputProc.on('exit', () => { inputProc = null; });
+    inputProc.on('error', (err) => {
+      console.error('[Input] long-running PS error', err.message);
+      inputProc = null;
+    });
+    // Drain stderr so it can't block the pipe.
+    inputProc.stderr.on('data', () => {});
+  } catch (err) {
+    console.error('[Input] failed to spawn long-running PS', err);
+    inputProc = null;
+  }
+  inputProcStarting = false;
+  return inputProc;
+}
+
+// Map a JS key name to a Windows VK code. Same minimal set as before.
+const VK_MAP = {
+  Enter: 0x0d, Backspace: 0x08, Tab: 0x09, Escape: 0x1b,
+  Shift: 0x10, Control: 0x11, Alt: 0x12, Space: 0x20,
+  ArrowLeft: 0x25, ArrowUp: 0x26, ArrowRight: 0x27, ArrowDown: 0x28,
+  Delete: 0x2e,
+};
+
+// Phase 3.5: Inject input. Priority: native addon (<1ms) → long-running
+// PowerShell (~1-5ms) → legacy per-event exec (~30-50ms). Each layer falls back
+// to the next on failure, so input works even if the native binary isn't built.
+function injectInputFast(event) {
+  // 1) Native addon — direct SendInput syscall.
+  const addon = loadNativeInput();
+  if (addon) {
+    try {
+      const { type, x, y, button, down, key } = event;
+      if (type === 'mouse_move') {
+        if (x == null || y == null) return;
+        const ax = Math.round(x * 65535);
+        const ay = Math.round(y * 65535);
+        // MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE = 0x8001
+        addon.injectMouse(ax, ay, 0x8001);
+        return;
+      }
+      if (type === 'mouse_click') {
+        let flag;
+        if (button === 'right') flag = down ? 0x0008 : 0x0010;
+        else if (button === 'middle') flag = down ? 0x0020 : 0x0040;
+        else flag = down ? 0x0002 : 0x0004;
+        addon.injectMouse(0, 0, flag);
+        return;
+      }
+      if (type === 'key') {
+        let vk = VK_MAP[key];
+        if (vk == null && key && key.length === 1) vk = key.toUpperCase().charCodeAt(0);
+        if (vk == null) return;
+        const flags = down ? 0 : 0x0002; // KEYEVENTF_KEYUP = 0x0002
+        addon.injectKey(vk, flags);
+        return;
+      }
+      return;
+    } catch (err) {
+      console.error('[Input] native inject failed, falling back to PowerShell:', err.message);
+      // Fall through to PowerShell path below.
+    }
+  }
+
+  // 2) Long-running PowerShell (~1-5ms).
+  const proc = getInputProc();
+  if (!proc || !proc.stdin || proc.stdin.destroyed) {
+    // 3) Legacy per-event exec (~30-50ms).
+    injectInputLegacy(event);
+    return;
+  }
+  const { type, x, y, button, down, key } = event;
+  let line = null;
+  if (type === 'mouse_move') {
+    if (x == null || y == null) return;
+    const ax = Math.round(x * 65535);
+    const ay = Math.round(y * 65535);
+    // MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE = 0x0001 | 0x8000 = 0x8001
+    line = `M ${ax} ${ay} 32769`;
+  } else if (type === 'mouse_click') {
+    let flag;
+    if (button === 'right') flag = down ? 0x0008 : 0x0010;
+    else if (button === 'middle') flag = down ? 0x0020 : 0x0040;
+    else flag = down ? 0x0002 : 0x0004;
+    // Keep the cursor where it last was — SendInput with no MOVE uses current pos.
+    // We pass dx=dy=0 and the ABSOLUTE flag off for clicks (relative to current pos).
+    line = `M 0 0 ${flag}`;
+  } else if (type === 'key') {
+    let vk = VK_MAP[key];
+    if (vk == null && key && key.length === 1) vk = key.toUpperCase().charCodeAt(0);
+    if (vk == null) return;
+    const flags = down ? 0 : 0x0002; // KEYEVENTF_KEYUP = 0x0002
+    line = `K ${vk} ${flags}`;
+  }
+  if (line) {
+    try { proc.stdin.write(line + '\n'); } catch (err) {
+      console.error('[Input] stdin write failed, falling back', err.message);
+      injectInputLegacy(event);
+    }
+  }
+}
+
+// Phase 3 (legacy): per-event PowerShell exec. Kept as a fallback for when the
+// long-running process can't start (e.g. PowerShell missing). ~30-50ms/event.
+function injectInputLegacy(event) {
+  try {
+    const { exec } = require('child_process');
+    const ps = buildInputPs(event);
+    if (!ps) return;
+    exec(ps, { windowsHide: true }, (err) => {
+      if (err) console.error('[Input] Inject failed', err.message);
+    });
+  } catch (err) {
+    console.error('[Input] injectInput error', err);
+  }
+}
+
+  // Phase 3.5: Inject mouse/keyboard input via the long-running PowerShell
+  // process (~1-5ms/event). Falls back to the legacy per-event exec if needed.
+  injectInput: async (event) => {
+    injectInputFast(event);
   },
 
   // Phase 3: Clipboard sync — write text to the Windows clipboard via PowerShell.

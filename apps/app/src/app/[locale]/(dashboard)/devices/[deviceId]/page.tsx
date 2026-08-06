@@ -33,6 +33,10 @@ export default function DeviceSessionPage() {
   // Phase 3: adaptive bitrate — track recent RTTs and tell the agent to adjust.
   const rttHistoryRef = useRef<number[]>([]);
   const currentBitrateRef = useRef<number>(1_500_000); // start at 1.5 Mbps
+  // Phase 3.5: WebRTC P2P. The viewer is the receiver. STUN-only (no TURN):
+  // if P2P fails (symmetric NAT), MSE-over-WS stays as the automatic fallback.
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const p2pActiveRef = useRef<boolean>(false);
 
   // Phase 3: Initialize MediaSource Extensions for webm playback.
   // The agent sends VP8 webm chunks from MediaRecorder; we append them to a
@@ -173,6 +177,66 @@ export default function DeviceSessionPage() {
                     navigator.clipboard.writeText(msg.text).catch(() => {});
                   }
                 } catch {}
+              } else if (msg.type === "webrtc_offer" && typeof msg.sdp === "string") {
+                // Phase 3.5: agent sent a WebRTC offer — answer it and wire up the track.
+                try {
+                  const iceServers: RTCIceServer[] = [
+                    { urls: "stun:stun.l.google.com:19302" },
+                  ];
+                  // Optional TURN (self-hosted coturn). Env:
+                  // NEXT_PUBLIC_TURN_URL=turn:host:3478?transport=tcp + user/pass.
+                  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL as string | undefined;
+                  if (turnUrl) {
+                    iceServers.push({
+                      urls: turnUrl,
+                      username: (process.env.NEXT_PUBLIC_TURN_USER as string) || "ollalink",
+                      credential: (process.env.NEXT_PUBLIC_TURN_PASS as string) || "ollalink-turn-secret",
+                    });
+                  }
+                  const pc = new RTCPeerConnection({ iceServers });
+                  pcRef.current = pc;
+                  pc.ontrack = (ev) => {
+                    // The agent's screen track arrived — switch the <video> to it.
+                    if (videoRef.current && ev.streams[0]) {
+                      videoRef.current.srcObject = ev.streams[0];
+                      p2pActiveRef.current = true;
+                      // Tell the agent P2P is live so it stops the MSE recorder.
+                      if (wsRef.current?.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({ type: "webrtc_connected" }));
+                      }
+                      toast.success("P2P video connected (sub-100ms)");
+                    }
+                  };
+                  pc.onicecandidate = (ev) => {
+                    if (ev.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
+                      wsRef.current.send(
+                        JSON.stringify({ type: "webrtc_ice", candidate: ev.candidate.toJSON() })
+                      );
+                    }
+                  };
+                  pc.onconnectionstatechange = () => {
+                    console.log("[Viewer] WebRTC state:", pc.connectionState);
+                    if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+                      p2pActiveRef.current = false;
+                      // MSE fallback is still running (if the agent is still sending chunks).
+                      toast.warning("P2P dropped — falling back to relayed video");
+                    }
+                  };
+                  await pc.setRemoteDescription({ type: "offer", sdp: msg.sdp });
+                  const answer = await pc.createAnswer();
+                  await pc.setLocalDescription(answer);
+                  wsRef.current.send(JSON.stringify({ type: "webrtc_answer", sdp: answer.sdp }));
+                } catch (err) {
+                  console.error("[Viewer] WebRTC answer failed", err);
+                  toast.error("P2P setup failed — using relayed video");
+                }
+              } else if (msg.type === "webrtc_ice" && msg.candidate) {
+                // Phase 3.5: ICE candidate from the agent.
+                try {
+                  await pcRef.current?.addIceCandidate(msg.candidate);
+                } catch (err) {
+                  console.error("[Viewer] addIceCandidate failed", err);
+                }
               }
             } catch (e) {
               console.error("Signal decode error", e);
@@ -211,6 +275,12 @@ export default function DeviceSessionPage() {
         clearInterval(pingTimerRef.current);
         pingTimerRef.current = null;
       }
+      // Phase 3.5: tear down the WebRTC peer connection.
+      if (pcRef.current) {
+        try { pcRef.current.close(); } catch {}
+        pcRef.current = null;
+      }
+      p2pActiveRef.current = false;
       if (sessionId) endSession({ sessionId });
       // Clean up MSE
       const mse = mseRef.current;

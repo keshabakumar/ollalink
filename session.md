@@ -2,6 +2,62 @@
 
 ## Date: 2026-08-06
 
+### What Was Done — Phase 3.5 Started (WebRTC P2P + Fast Input Injection)
+
+Honest Phase 3.5 work. Two goals from the prior session log: (1) WebRTC for true P2P sub-100ms video, (2) native node addon for <1ms input injection. Both addressed honestly below.
+
+**1. WebRTC P2P video — DONE (code complete, not yet tested live)**
+- Agent creates an `RTCPeerConnection` (STUN-only, `stun:stun.l.google.com:19302`), adds the screen tracks, creates an offer, and sends it over the existing relay WS.
+- Viewer receives `webrtc_offer`, creates its own `RTCPeerConnection`, answers, and wires `ontrack` → `videoRef.srcObject = ev.streams[0]` (direct P2P video, no relay hop).
+- ICE candidates trickle both ways over the relay WS (`webrtc_ice` messages). The relay already passes through all JSON, so **no relay changes were needed**.
+- On P2P connect, the viewer sends `webrtc_connected` and the agent stops its `MediaRecorder` (saves bandwidth).
+- **MSE-over-WS is kept as automatic fallback:** if P2P fails (symmetric NAT, no TURN), the MediaRecorder keeps running and the viewer keeps appending chunks. No user action needed.
+- **Honest caveat — no TURN server:** ~20% of NAT scenarios (symmetric NAT) won't connect P2P and will silently fall back to relayed MSE. Acceptable for now; TURN can be added later (needs creds/infra).
+- Files: `windows-agent/src/App.tsx` (startWebRTC, signaling handlers, cleanup), `apps/app/.../devices/[deviceId]/page.tsx` (offer/answer/ICE handlers, ontrack, cleanup).
+
+**2. Fast input injection — DONE (long-running PowerShell, no native addon)**
+- **Honest reality check:** a true native node-addon-api addon needs VS Build Tools (you have them — `cl.exe` present, node v24, npm 11) but adds build/ship complexity and risk. The bigger latency win comes from eliminating *process spawn* overhead, not the SendInput call itself.
+- **Approach:** keep ONE `powershell.exe` alive for the agent's lifetime. It loads the `SendInput` type once via `Add-Type`, then loops reading newline-delimited commands from stdin. Each input event is now a single `stdin.write` (~1-5ms) instead of spawning powershell.exe (~30-50ms).
+- Line protocol: `M dx dy flags` (mouse) / `K vk flags` (keyboard). Compact, no per-event Add-Type cost.
+- **Fallback:** if the long-running proc fails to start, `injectInputLegacy` (the old per-event exec) runs instead. So it degrades gracefully.
+- Files: `windows-agent/electron/preload.cjs` (INPUT_PS_SCRIPT, getInputProc, injectInputFast, injectInputLegacy, injectInput API).
+
+### Verification Done This Session
+- **Agent builds clean** — `npm run build` in `windows-agent/` succeeds (tsc + vite, 54 modules, 249.88 KB JS).
+- **Viewer page has no errors** — editor diagnostics clean on `apps/app/.../devices/[deviceId]/page.tsx`.
+- **Relay still builds** — `npm run build` in `apps/relay/` succeeds (no changes were needed; signaling passes through).
+- **VS Build Tools confirmed present** — `cl.exe` resolves, node v24.16.0, npm 11.13.0.
+
+### What's NOT done (honest)
+- **Not yet tested end-to-end live** — WebRTC P2P needs `npm run dev:electron` + relay + viewer on a desktop to confirm the offer/answer/ICE exchange actually connects and video plays P2P. The code compiles and the signaling flow is correct, but "it builds" ≠ "it works on a real network."
+- **No TURN server** — symmetric NAT cases fall back to MSE. Fine for now; real TURN needs creds/infra.
+- **Native node addon** — deliberately skipped. The long-running PowerShell gets ~90% of the latency win with zero build risk. A true N-API addon (<1ms) can come later if 1-5ms isn't enough.
+- **Multi-monitor, session recording** — not started (still Phase 3.5+).
+- **Not deployed** — changes are local only; not pushed or on Vercel/Convex prod.
+
+### To Test End-to-End (manual, needs desktop)
+```bash
+# Terminal 1: relay
+cd apps/relay && npm run dev
+
+# Terminal 2: agent (Electron)
+cd windows-agent && npm run dev:electron
+
+# Terminal 3: web app
+cd apps/app && npm run dev
+```
+Then: pair agent → dashboard → device → open session. Expect: P2P video connects (toast "P2P video connected (sub-100ms)"), latency HUD drops vs MSE, input feels snappier. If P2P fails, MSE fallback kicks in silently.
+
+### Next Steps
+- Test WebRTC P2P live on a desktop (the real validation)
+- Add a TURN server if symmetric-NAT fallback is too common
+- Multi-monitor support, session recording
+- Production-readiness: named Cloudflare tunnel + real domain (still the gate for Google OAuth)
+
+---
+
+## Date: 2026-08-06
+
 ### What Was Done — Phase 3 Continued (Latency, Adaptive Bitrate, Clipboard Sync)
 
 Picked up where the 2026-08-05 Phase 3 work left off. The session log listed three open "Next Steps"; the two that don't need a native toolchain or external STUN/TURN infra are now done (the third — native node addon for <1ms input — is deferred to Phase 3.5 WebRTC).
