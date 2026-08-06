@@ -6,7 +6,7 @@ import { api } from "@v1/backend/convex/_generated/api";
 import type { Id } from "@v1/backend/convex/_generated/dataModel";
 import { Button } from "@v1/ui/button";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Monitor, Maximize2, RefreshCw, Wifi, Activity, Power } from "lucide-react";
+import { ArrowLeft, Monitor, Maximize2, RefreshCw, Wifi, Activity, Power, Clipboard } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +27,12 @@ export default function DeviceSessionPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const mseRef = useRef<{ mediaSource: MediaSource; sourceBuffer: SourceBuffer; queue: ArrayBuffer[]; lastFrameAt: number; frameCount: number } | null>(null);
+  // Phase 3: real latency measurement via ping/pong RTT.
+  const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPingAtRef = useRef<number>(0);
+  // Phase 3: adaptive bitrate — track recent RTTs and tell the agent to adjust.
+  const rttHistoryRef = useRef<number[]>([]);
+  const currentBitrateRef = useRef<number>(1_500_000); // start at 1.5 Mbps
 
   // Phase 3: Initialize MediaSource Extensions for webm playback.
   // The agent sends VP8 webm chunks from MediaRecorder; we append them to a
@@ -120,6 +126,13 @@ export default function DeviceSessionPage() {
           setStatus("connected");
           toast.success("Remote session connected");
           initMse();
+          // Phase 3: start ping/pong RTT measurement (every 2s).
+          if (pingTimerRef.current) clearInterval(pingTimerRef.current);
+          pingTimerRef.current = setInterval(() => {
+            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+            lastPingAtRef.current = Date.now();
+            wsRef.current.send(JSON.stringify({ type: "ping", t: lastPingAtRef.current }));
+          }, 2000);
         };
 
         ws.onmessage = (event) => {
@@ -131,6 +144,35 @@ export default function DeviceSessionPage() {
               } else if (msg.type === "peer_disconnected") {
                 toast.warning("Windows Agent disconnected");
                 setStatus("disconnected");
+              } else if (msg.type === "pong" && typeof msg.t === "number") {
+                // Phase 3: compute RTT from the echoed timestamp.
+                const rtt = Date.now() - msg.t;
+                setLatency(rtt);
+                // Track RTT history for adaptive bitrate decisions.
+                const hist = rttHistoryRef.current;
+                hist.push(rtt);
+                if (hist.length > 10) hist.shift();
+                // Adjust bitrate every ~10s (5 pongs at 2s interval) based on avg RTT.
+                if (hist.length >= 5) {
+                  const avg = hist.reduce((a, b) => a + b, 0) / hist.length;
+                  let target = currentBitrateRef.current;
+                  if (avg > 400 && target > 500_000) {
+                    target = Math.max(500_000, Math.round(target * 0.7));
+                  } else if (avg < 120 && target < 3_000_000) {
+                    target = Math.min(3_000_000, Math.round(target * 1.3));
+                  }
+                  if (target !== currentBitrateRef.current) {
+                    currentBitrateRef.current = target;
+                    wsRef.current.send(JSON.stringify({ type: "set_bitrate", bps: target }));
+                  }
+                }
+              } else if (msg.type === "clipboard" && typeof msg.text === "string") {
+                // Phase 3: agent pushed its clipboard → write to the viewer's clipboard.
+                try {
+                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(msg.text).catch(() => {});
+                  }
+                } catch {}
               }
             } catch (e) {
               console.error("Signal decode error", e);
@@ -145,6 +187,10 @@ export default function DeviceSessionPage() {
 
         ws.onclose = () => {
           setStatus("disconnected");
+          if (pingTimerRef.current) {
+            clearInterval(pingTimerRef.current);
+            pingTimerRef.current = null;
+          }
         };
 
         ws.onerror = () => {
@@ -161,6 +207,10 @@ export default function DeviceSessionPage() {
 
     return () => {
       if (wsRef.current) wsRef.current.close();
+      if (pingTimerRef.current) {
+        clearInterval(pingTimerRef.current);
+        pingTimerRef.current = null;
+      }
       if (sessionId) endSession({ sessionId });
       // Clean up MSE
       const mse = mseRef.current;
@@ -236,6 +286,23 @@ export default function DeviceSessionPage() {
     }
   };
 
+  // Phase 3: push the viewer's clipboard to the agent (manual button to avoid
+  // silent permission prompts — reading the clipboard requires user gesture).
+  const sendClipboard = async () => {
+    if (status !== "connected" || !wsRef.current) return;
+    try {
+      const text = navigator.clipboard?.readText ? await navigator.clipboard.readText() : "";
+      if (text) {
+        wsRef.current.send(JSON.stringify({ type: "set_clipboard", text }));
+        toast.success("Clipboard sent to remote");
+      } else {
+        toast.info("Your clipboard is empty");
+      }
+    } catch {
+      toast.error("Could not read your clipboard (permission denied)");
+    }
+  };
+
   return (
     <div className="flex h-screen w-full flex-col bg-slate-950 text-white">
       {/* Control Top Bar */}
@@ -277,6 +344,10 @@ export default function DeviceSessionPage() {
 
         {/* Toolbar Actions */}
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={sendClipboard} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
+            <Clipboard className="h-3.5 w-3.5" />
+            Send clipboard
+          </Button>
           <Button variant="outline" size="sm" onClick={toggleFullscreen} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
             <Maximize2 className="h-3.5 w-3.5" />
             Fullscreen

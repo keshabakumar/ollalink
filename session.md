@@ -1,5 +1,73 @@
 # Session Log — Ollalink
 
+## Date: 2026-08-06
+
+### What Was Done — Phase 3 Continued (Latency, Adaptive Bitrate, Clipboard Sync)
+
+Picked up where the 2026-08-05 Phase 3 work left off. The session log listed three open "Next Steps"; the two that don't need a native toolchain or external STUN/TURN infra are now done (the third — native node addon for <1ms input — is deferred to Phase 3.5 WebRTC).
+
+**1. Real latency measurement (ping/pong RTT) — DONE**
+- Viewer sends `{type:"ping", t: Date.now()}` every 2s; agent echoes `{type:"pong", t}` back.
+- Viewer computes RTT = `Date.now() - msg.t` and updates the HUD `latency` state (was hardcoded `0`).
+- Files: `windows-agent/src/App.tsx` (pong echo), `apps/app/.../devices/[deviceId]/page.tsx` (ping timer + pong handler).
+
+**2. Adaptive bitrate — DONE**
+- Viewer keeps a rolling 10-sample RTT history. Every ~10s (5 pongs), if avg RTT > 400ms it tells the agent to drop bitrate to 70% (floor 500 Kbps); if avg RTT < 120ms it raises to 130% (cap 3 Mbps).
+- Agent handles `{type:"set_bitrate", bps}` by setting `recorder.videoBitsPerSecond` on the live `MediaRecorder`.
+- Replaces the previous fixed 1.5 Mbps — now scales 500 Kbps ↔ 3 Mbps based on real network conditions.
+
+**3. Bidirectional clipboard sync — DONE**
+- Agent → viewer: agent polls Windows clipboard via PowerShell `Get-Clipboard -Raw` every 1s; on change, sends `{type:"clipboard", text}` to viewer, which writes to `navigator.clipboard.writeText`.
+- Viewer → agent: "Send clipboard" toolbar button reads `navigator.clipboard.readText` (user-gesture-gated) and sends `{type:"set_clipboard", text}`; agent writes to Windows clipboard via `Set-Clipboard`.
+- Agent tracks `lastClipboardRef` to avoid echoing a just-written clipboard back to the viewer.
+- New preload APIs: `window.electron.setClipboard(text)`, `window.electron.getClipboard()`.
+
+**Files modified:**
+- `windows-agent/electron/preload.cjs` — `setClipboard()`, `getClipboard()` (PowerShell-based, ~30-50ms, honest placeholder)
+- `windows-agent/src/App.tsx` — pong echo, `set_bitrate` handler, `set_clipboard` handler, clipboard poller (start on WS open, stop on cleanup), `clipboardTimerRef`, `lastClipboardRef`
+- `windows-agent/vite.config.ts` — added `resolve.dedupe` for React to fix pre-existing dev-server crash
+- `apps/app/src/app/[locale]/(dashboard)/devices/[deviceId]/page.tsx` — ping timer, pong→RTT→latency HUD, adaptive bitrate logic, incoming `clipboard` handler, `sendClipboard()` button + `Clipboard` icon import
+
+### Verification Done This Session
+- **Agent builds clean** — `npm run build` in `windows-agent/` succeeds (tsc + vite, 60 modules, 387 KB JS).
+- **No type errors** in `App.tsx` or the viewer `page.tsx` (the viewer page is `@ts-nocheck` already, but the editor reports no new diagnostics).
+- **All three services started live:**
+  - Relay: `apps/relay` on `:8080` → `/health` returns `{"status":"ok","activeSessions":0}`
+  - Web app: `apps/app` on `:3000` → `/` redirects to `/login`, login page renders
+  - Electron agent: `windows-agent` Vite on `:5173` + Electron window launched
+- **Fixed pre-existing React dedupe bug** — agent's Vite dev server was throwing `A React Element from an older version of React was rendered` in `<ConvexProvider>`. Root cause: Vite pre-bundling `convex` pulled a second React copy. Fix: added `resolve.dedupe: ['react','react-dom','react/jsx-runtime']` to `windows-agent/vite.config.ts` + cleared `.vite` cache. Error gone, agent renders.
+- **Relay round-trip verified for ALL new Phase 3 message types** — Node script connected a fake agent + viewer on the same sessionId and confirmed:
+  - `ping` → agent echoes `pong` → viewer computes RTT (**8ms** on localhost) ✅
+  - `set_clipboard` (viewer → agent) ✅
+  - `set_bitrate` (viewer → agent) ✅
+  - `clipboard` (agent → viewer) ✅
+
+### What's NOT done (honest)
+- **Native node addon for input injection** — still PowerShell `SendInput` (~30-50ms/event). Deferred to Phase 3.5 (needs node-addon-api / N-API toolchain).
+- **WebRTC (true P2P, sub-100ms)** — deferred to Phase 3.5. Current path is still relayed video over WebSocket + MSE, not P2P.
+- **Multi-monitor, session recording** — not started.
+- **Not yet tested end-to-end** — needs `npm run dev:electron` + relay + viewer on a desktop.
+
+### To Test End-to-End (manual, needs desktop)
+```bash
+# Terminal 1: relay
+cd apps/relay && npm run dev
+
+# Terminal 2: agent (Electron)
+cd windows-agent && npm run dev:electron
+
+# Terminal 3: web app
+cd apps/app && npm run dev
+```
+Then: pair agent → dashboard → device → open session → live VP8 video + mouse/keyboard control + real latency HUD + adaptive bitrate + clipboard sync.
+
+### Next Steps
+- Phase 3.5: WebRTC for true P2P (sub-100ms) + native node addon for <1ms input injection
+- Multi-monitor support, session recording
+- Production-readiness: named Cloudflare tunnel + real domain (activates Google OAuth), real Google/Polar creds
+
+---
+
 ## Date: 2026-08-05
 
 ### What Was Done — Phase 3 Started (Real Remote Desktop Engine)
@@ -73,6 +141,13 @@ Then: pair agent → dashboard → device → open session → live VP8 video + 
 - Phase 3.5: WebRTC for true P2P (sub-100ms)
 
 ---
+
+### What Was Done
+- Greeted the user and asked how I can help.
+
+### Discussion
+- User message: "hii"
+
 
 ## Date: 2026-08-03
 

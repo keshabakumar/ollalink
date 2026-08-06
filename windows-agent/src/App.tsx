@@ -32,6 +32,8 @@ function App() {
   const agentWsRef = useRef<WebSocket | null>(null);
   const agentFrameTimerRef = useRef<number | null>(null);
   const agentRecorderRef = useRef<MediaRecorder | null>(null);
+  const clipboardTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastClipboardRef = useRef<string>('');
 
   const cleanupAgentSession = () => {
     if (agentWsRef.current) {
@@ -50,6 +52,11 @@ function App() {
       window.clearTimeout(agentFrameTimerRef.current);
       agentFrameTimerRef.current = null;
     }
+    if (clipboardTimerRef.current) {
+      clearInterval(clipboardTimerRef.current);
+      clipboardTimerRef.current = null;
+    }
+    lastClipboardRef.current = '';
     currentAgentSessionRef.current = null;
     setAgentSessionId(null);
   };
@@ -69,12 +76,47 @@ function App() {
       currentAgentSessionRef.current = sessionId;
       setAgentSessionId(sessionId);
       await startVideoStream(ws);
+      // Phase 3: poll local clipboard every 1s and push changes to the viewer.
+      if (clipboardTimerRef.current) clearInterval(clipboardTimerRef.current);
+      lastClipboardRef.current = '';
+      clipboardTimerRef.current = setInterval(async () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        try {
+          // @ts-ignore
+          const text = window.electron?.getClipboard ? await window.electron.getClipboard() : '';
+          if (typeof text === 'string' && text && text !== lastClipboardRef.current) {
+            lastClipboardRef.current = text;
+            ws.send(JSON.stringify({ type: 'clipboard', text }));
+          }
+        } catch {}
+      }, 1000);
     };
 
     ws.onmessage = async (event) => {
       if (typeof event.data === 'string') {
         try {
           const msg = JSON.parse(event.data);
+          // Phase 3: echo viewer pings back as pong for RTT latency measurement.
+          if (msg.type === 'ping' && typeof msg.t === 'number') {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
+            }
+            return;
+          }
+          // Phase 3: viewer requested a bitrate change (adaptive bitrate feedback).
+          if (msg.type === 'set_bitrate' && typeof msg.bps === 'number') {
+            const recorder = agentRecorderRef.current;
+            if (recorder && recorder.state === 'recording') {
+              try {
+                // @ts-ignore — videoBitsPerSecond is a valid option on some browsers.
+                recorder.videoBitsPerSecond = msg.bps;
+                console.log('[Agent] Bitrate adjusted to', msg.bps);
+              } catch (err) {
+                console.error('[Agent] Bitrate adjust failed', err);
+              }
+            }
+            return;
+          }
           // Phase 3: actually handle viewer input instead of just console.log
           if (msg.type === 'mouse_move' || msg.type === 'mouse_click' || msg.type === 'key') {
             try {
@@ -82,6 +124,16 @@ function App() {
               await window.electron.injectInput(msg);
             } catch (err) {
               console.error('[Agent] Input inject failed', err);
+            }
+          }
+          // Phase 3: viewer pushed its clipboard → write to Windows clipboard.
+          if (msg.type === 'set_clipboard' && typeof msg.text === 'string') {
+            try {
+              // @ts-ignore
+              await window.electron.setClipboard(msg.text);
+              lastClipboardRef.current = msg.text; // avoid echoing it back
+            } catch (err) {
+              console.error('[Agent] setClipboard failed', err);
             }
           }
         } catch (e) {

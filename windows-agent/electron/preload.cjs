@@ -190,6 +190,45 @@ contextBridge.exposeInMainWorld('electron', {
       console.error('[Input] injectInput error', err);
     }
   },
+
+  // Phase 3: Clipboard sync — write text to the Windows clipboard via PowerShell.
+  // Honest: spawns powershell.exe (~30-50ms), fine for occasional clipboard writes.
+  setClipboard: async (text) => {
+    try {
+      const { exec } = require('child_process');
+      // Escape single quotes for PowerShell single-quoted string.
+      const safe = String(text).replace(/'/g, "''");
+      const ps = `powershell -NoProfile -Command "Set-Clipboard -Value '${safe}'"`;
+      exec(ps, { windowsHide: true }, (err) => {
+        if (err) console.error('[Clipboard] set failed', err.message);
+      });
+    } catch (err) {
+      console.error('[Clipboard] setClipboard error', err);
+    }
+  },
+
+  // Phase 3: Clipboard sync — read text from the Windows clipboard via PowerShell.
+  // Returns '' on failure. Used by the agent to push its clipboard to the viewer.
+  getClipboard: async () => {
+    try {
+      const { exec } = require('child_process');
+      return await new Promise((resolve) => {
+        const ps = `powershell -NoProfile -Command "Get-Clipboard -Raw"`;
+        exec(ps, { windowsHide: true, maxBuffer: 2 * 1024 * 1024 }, (err, stdout) => {
+          if (err) {
+            console.error('[Clipboard] get failed', err.message);
+            resolve('');
+          } else {
+            // Get-Clipboard -Raw preserves newlines; trim only the trailing one PowerShell adds.
+            resolve(stdout.replace(/\r?\n$/, ''));
+          }
+        });
+      });
+    } catch (err) {
+      console.error('[Clipboard] getClipboard error', err);
+      return '';
+    }
+  },
   getPairingCode: () => {
     const args = process.argv;
     const pairingCodeArgIndex = args.findIndex(arg => arg.toLowerCase() === '-pairingcode' || arg.toLowerCase() === '--pairing-code');

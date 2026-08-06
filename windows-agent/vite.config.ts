@@ -5,4 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  resolve: {
+    // Force Vite to resolve a single copy of React — without this, pre-bundling
+    // convex can pull in a second React copy and trigger
+    // "A React Element from an older version of React was rendered".
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
+  },
 })
