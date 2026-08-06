@@ -2,16 +2,16 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy the relay package files and install deps.
-COPY apps/relay/package.json apps/relay/package-lock.json* ./
-RUN npm install --production=false
+# Copy only the relay package — no monorepo root, no workspace deps.
+COPY package.json ./
+RUN npm install
 
-# Copy the source and build.
-COPY apps/relay/tsconfig.json ./
-COPY apps/relay/src ./src
+# Copy source and build.
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
-# Production deps only.
+# Prune dev deps.
 RUN npm prune --production
 
 EXPOSE 8080

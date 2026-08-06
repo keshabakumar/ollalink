@@ -2,15 +2,14 @@
   "name": "ollalink-relay",
   "description": "Ollalink WebSocket relay server for WebRTC signaling + MSE video fallback",
   "type": "web_service",
-  "env": "node",
+  "env": "docker",
   "region": "oregon",
   "plan": "free",
   "healthCheckPath": "/health",
   "autoDeploy": true,
-  "root": "apps/relay",
-  "buildCommand": "npm install && npm run build",
-  "startCommand": "node dist/index.js",
+  "dockerfilePath": "apps/relay/Dockerfile",
+  "dockerContext": "apps/relay",
   "envVars": [
-    { "key": "PORT", "value": "10000" }
+    { "key": "PORT", "value": "8080" }
   ]
 }
