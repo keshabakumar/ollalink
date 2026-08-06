@@ -142,15 +142,20 @@ contextBridge.exposeInMainWorld('electron', {
   // Phase 3: Real video capture.
   // Returns a MediaStream from the primary screen via desktopCapturer + getUserMedia.
   // The renderer creates a MediaRecorder on this stream and sends webm chunks over WS.
-  getScreenStream: async () => {
+  // Phase 3.5: optional sourceId lets the viewer pick a specific monitor.
+  getScreenStream: async (sourceId) => {
     try {
-      const { desktopCapturer } = require('electron');
-      const sources = await desktopCapturer.getSources({
-        types: ['screen'],
-        thumbnailSize: { width: 0, height: 0 }, // we don't need thumbnails
-      });
-      if (!sources.length) throw new Error('No screen source available');
-      const sourceId = sources[0].id;
+      // If no sourceId given, pick the primary screen (first source).
+      let id = sourceId;
+      if (!id) {
+        const { desktopCapturer } = require('electron');
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: { width: 0, height: 0 },
+        });
+        if (!sources.length) throw new Error('No screen source available');
+        id = sources[0].id;
+      }
 
       // getUserMedia with chromeMediaSource is the Electron-only way to capture a screen.
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -158,7 +163,7 @@ contextBridge.exposeInMainWorld('electron', {
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
-            chromeMediaSourceId: sourceId,
+            chromeMediaSourceId: id,
             minWidth: 1280,
             maxWidth: 1920,
             minHeight: 720,
@@ -172,6 +177,31 @@ contextBridge.exposeInMainWorld('electron', {
     } catch (err) {
       console.error('[Capture] Failed to get screen stream', err);
       throw err;
+    }
+  },
+
+  // Phase 3.5: List all available screen sources (multi-monitor).
+  // Returns [{ id, name, display_id, width, height }] for each monitor.
+  // The viewer uses this to show a monitor picker; the chosen id is passed
+  // back to getScreenStream(id) and startVideoStream(ws, sourceId).
+  getScreenSources: async () => {
+    try {
+      const { desktopCapturer } = require('electron');
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 320, height: 180 }, // small thumbnails for the picker
+        fetchWindowIcons: false,
+      });
+      return sources.map((s) => ({
+        id: s.id,
+        name: s.name,
+        display_id: s.display_id,
+        // thumbnail as a data URL so the viewer can preview each monitor
+        thumbnail: s.thumbnail.toDataURL(),
+      }));
+    } catch (err) {
+      console.error('[Capture] Failed to list screen sources', err);
+      return [];
     }
   },
 

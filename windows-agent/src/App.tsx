@@ -89,6 +89,18 @@ function App() {
       currentAgentSessionRef.current = sessionId;
       setAgentSessionId(sessionId);
       await startVideoStream(ws);
+      // Phase 3.5: send the list of available monitors to the viewer so it can
+      // show a monitor picker. The viewer sends back `select_monitor` with the
+      // chosen source id to switch monitors mid-session.
+      try {
+        // @ts-ignore
+        const sources = window.electron?.getScreenSources ? await window.electron.getScreenSources() : [];
+        if (sources.length > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'monitors', sources }));
+        }
+      } catch (err) {
+        console.error('[Agent] Failed to list monitors', err);
+      }
       // Phase 3.5: attempt WebRTC P2P. The screen stream is captured once and
       // shared by both the MediaRecorder fallback and the RTCPeerConnection.
       // If P2P connects, the viewer tells us and we stop the MediaRecorder.
@@ -135,6 +147,29 @@ function App() {
               } catch (err) {
                 console.error('[Agent] Bitrate adjust failed', err);
               }
+            }
+            return;
+          }
+          // Phase 3.5: viewer selected a different monitor — restart the video
+          // stream with the new source id. Also tears down + rebuilds WebRTC.
+          if (msg.type === 'select_monitor' && typeof msg.sourceId === 'string') {
+            const ws = agentWsRef.current;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            console.log('[Agent] Switching monitor to', msg.sourceId);
+            // Stop the old recorder + WebRTC, keep the WS.
+            if (agentRecorderRef.current) {
+              try { if (agentRecorderRef.current.state !== 'inactive') agentRecorderRef.current.stop(); } catch {}
+              agentRecorderRef.current = null;
+            }
+            if (agentPcRef.current) {
+              try { agentPcRef.current.close(); } catch {}
+              agentPcRef.current = null;
+            }
+            agentP2pActiveRef.current = false;
+            // Start fresh with the selected source.
+            await startVideoStream(ws, msg.sourceId);
+            try { await startWebRTC(ws); } catch (err) {
+              console.error('[Agent] WebRTC restart after monitor switch failed', err);
             }
             return;
           }
@@ -268,10 +303,11 @@ function App() {
   // Phase 3: Real video capture via MediaRecorder.
   // Gets a MediaStream from the screen, records it as VP8 webm chunks,
   // and sends each chunk over the WebSocket as binary.
-  const startVideoStream = async (ws: WebSocket) => {
+  // Phase 3.5: optional sourceId selects a specific monitor (multi-monitor).
+  const startVideoStream = async (ws: WebSocket, sourceId?: string) => {
     try {
       // @ts-ignore
-      const stream: MediaStream = await window.electron.getScreenStream();
+      const stream: MediaStream = await window.electron.getScreenStream(sourceId);
       agentStreamRef.current = stream;
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8',

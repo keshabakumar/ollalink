@@ -24,6 +24,9 @@ export default function DeviceSessionPage() {
   const [status, setStatus] = useState<"initializing" | "connecting" | "connected" | "disconnected">("initializing");
   const [latency, setLatency] = useState<number>(0);
   const [fps, setFps] = useState<number>(0);
+  // Phase 3.5: multi-monitor — list of monitors from the agent + selected one.
+  const [monitors, setMonitors] = useState<{ id: string; name: string; thumbnail?: string }[]>([]);
+  const [selectedMonitor, setSelectedMonitor] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const mseRef = useRef<{ mediaSource: MediaSource; sourceBuffer: SourceBuffer; queue: ArrayBuffer[]; lastFrameAt: number; frameCount: number } | null>(null);
@@ -145,6 +148,13 @@ export default function DeviceSessionPage() {
               const msg = JSON.parse(event.data);
               if (msg.type === "peer_connected") {
                 toast.info("Windows Agent connected to session");
+              } else if (msg.type === "monitors" && Array.isArray(msg.sources)) {
+                // Phase 3.5: agent sent the list of available monitors.
+                setMonitors(msg.sources);
+                // Auto-select the first if none selected yet.
+                if (!selectedMonitor && msg.sources.length > 0) {
+                  setSelectedMonitor(msg.sources[0].id);
+                }
               } else if (msg.type === "peer_disconnected") {
                 toast.warning("Windows Agent disconnected");
                 setStatus("disconnected");
@@ -414,6 +424,33 @@ export default function DeviceSessionPage() {
 
         {/* Toolbar Actions */}
         <div className="flex items-center gap-2">
+          {/* Phase 3.5: multi-monitor picker. Only shown if the agent sent >1 monitor. */}
+          {monitors.length > 1 && (
+            <select
+              value={selectedMonitor ?? ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedMonitor(id);
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({ type: "select_monitor", sourceId: id }));
+                  // Reset MSE for the new stream.
+                  const mse = mseRef.current;
+                  if (mse && mse.mediaSource.readyState === "open") {
+                    try { mse.mediaSource.endOfStream(); } catch {}
+                  }
+                  mseRef.current = null;
+                  initMse();
+                  toast.info("Switching monitor…");
+                }
+              }}
+              className="h-8 rounded-md border border-slate-700 bg-slate-800 px-2 text-xs text-slate-200 hover:bg-slate-700"
+              title="Select monitor"
+            >
+              {monitors.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          )}
           <Button variant="outline" size="sm" onClick={sendClipboard} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
             <Clipboard className="h-3.5 w-3.5" />
             Send clipboard
