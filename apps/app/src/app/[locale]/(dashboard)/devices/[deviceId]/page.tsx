@@ -139,7 +139,7 @@ export default function DeviceSessionPage() {
           }, 2000);
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = async (event) => {
           if (typeof event.data === "string") {
             try {
               const msg = JSON.parse(event.data);
