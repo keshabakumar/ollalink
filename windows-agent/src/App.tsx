@@ -66,6 +66,9 @@ function App() {
   const bytesSentRef = useRef<number>(0);
   const frameCountRef = useRef<number>(0);
   const lastFpsUpdateRef = useRef<number>(Date.now());
+  // Session recording.
+  const recordingStreamRef = useRef<any>(null);
+  const recordingFilePathRef = useRef<string | null>(null);
 
   const cleanupAgentSession = () => {
     if (agentWsRef.current) {
@@ -259,6 +262,43 @@ function App() {
               console.error('[Agent] setClipboard failed', err);
             }
           }
+          // Session recording: viewer requests start/stop recording.
+          if (msg.type === 'start_recording') {
+            try {
+              // @ts-ignore
+              const rec = await window.electron.startRecording();
+              if (rec) {
+                recordingStreamRef.current = rec.stream;
+                recordingFilePathRef.current = rec.filePath;
+                console.log('[Agent] Recording started:', rec.filePath);
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'recording_started', filePath: rec.filePath }));
+                }
+              }
+            } catch (err) {
+              console.error('[Agent] Failed to start recording', err);
+            }
+            return;
+          }
+          if (msg.type === 'stop_recording') {
+            try {
+              const stream = recordingStreamRef.current;
+              const filePath = recordingFilePathRef.current;
+              if (stream && filePath) {
+                // @ts-ignore
+                await window.electron.stopRecording(stream, filePath);
+                console.log('[Agent] Recording stopped:', filePath);
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'recording_stopped', filePath }));
+                }
+              }
+              recordingStreamRef.current = null;
+              recordingFilePathRef.current = null;
+            } catch (err) {
+              console.error('[Agent] Failed to stop recording', err);
+            }
+            return;
+          }
         } catch (e) {
           console.error('[Agent] Invalid viewer message', e);
         }
@@ -350,6 +390,16 @@ function App() {
           ws.send(e.data);
           bytesSentRef.current += e.data.size;
           frameCountRef.current++;
+          // If recording is active, also save this chunk to the recording file.
+          if (recordingStreamRef.current && e.data.arrayBuffer) {
+            e.data.arrayBuffer().then((buf: ArrayBuffer) => {
+              // @ts-ignore
+              if (window.electron?.appendRecordingChunk) {
+                // @ts-ignore
+                window.electron.appendRecordingChunk(recordingStreamRef.current, buf);
+              }
+            }).catch(() => {});
+          }
           // Update FPS every second.
           const now = Date.now();
           if (now - lastFpsUpdateRef.current >= 1000) {

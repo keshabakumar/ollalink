@@ -37,6 +37,8 @@ export default function DeviceSessionPage() {
     dataReceived: 0,
   });
   const dataReceivedRef = useRef(0);
+  // Session recording state.
+  const [isRecording, setIsRecording] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const mseRef = useRef<{ mediaSource: MediaSource; sourceBuffer: SourceBuffer; queue: ArrayBuffer[]; lastFrameAt: number; frameCount: number } | null>(null);
@@ -173,6 +175,12 @@ export default function DeviceSessionPage() {
               } else if (msg.type === "peer_disconnected") {
                 toast.warning("Windows Agent disconnected");
                 setStatus("disconnected");
+              } else if (msg.type === "recording_started") {
+                setIsRecording(true);
+                toast.success("Recording started");
+              } else if (msg.type === "recording_stopped") {
+                setIsRecording(false);
+                toast.success(`Recording saved: ${msg.filePath}`);
               } else if (msg.type === "pong" && typeof msg.t === "number") {
                 // Phase 3: compute RTT from the echoed timestamp.
                 const rtt = Date.now() - msg.t;
@@ -403,6 +411,22 @@ export default function DeviceSessionPage() {
     }
   };
 
+  // Session recording: start/stop recording on the agent side.
+  const toggleRecording = async () => {
+    if (status !== "connected" || !wsRef.current) return;
+    if (isRecording) {
+      // Stop recording.
+      wsRef.current.send(JSON.stringify({ type: "stop_recording" }));
+      setIsRecording(false);
+      toast.info("Recording stopped — file saved on agent machine");
+    } else {
+      // Start recording.
+      wsRef.current.send(JSON.stringify({ type: "start_recording" }));
+      setIsRecording(true);
+      toast.success("Recording started");
+    }
+  };
+
   return (
     <div className="flex h-screen w-full flex-col bg-slate-950 text-white">
       {/* Control Top Bar */}
@@ -474,6 +498,10 @@ export default function DeviceSessionPage() {
           <Button variant="outline" size="sm" onClick={sendClipboard} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
             <Clipboard className="h-3.5 w-3.5" />
             Send clipboard
+          </Button>
+          <Button variant={isRecording ? "destructive" : "outline"} size="sm" onClick={toggleRecording} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
+            <div className={`h-2 w-2 rounded-full ${isRecording ? "bg-white animate-pulse" : "bg-red-500"}`} />
+            {isRecording ? "Stop Recording" : "Record"}
           </Button>
           <Button variant="outline" size="sm" onClick={toggleFullscreen} className="gap-1.5 border-slate-700 bg-slate-800 hover:bg-slate-700">
             <Maximize2 className="h-3.5 w-3.5" />
