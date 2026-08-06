@@ -6,6 +6,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      SKIP_ENV_VALIDATION: "1"
+      NEXT_PUBLIC_CONVEX_URL: "https://good-kingfisher-535.convex.cloud"
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
