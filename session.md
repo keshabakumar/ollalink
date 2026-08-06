@@ -2,6 +2,55 @@
 
 ## Date: 2026-08-06
 
+### What Was Done — Relay + Agent + Viewer Rewrite with Performance Monitoring
+
+Studied a reference remote desktop codebase (MIT-licensed, C++/Rust/Go architecture) and applied its architectural concepts to rewrite our relay, agent, and viewer — fully original implementation, no reference to the source project.
+
+**1. Relay server rewrite (apps/relay/src/index.ts)**
+- **Session management**: per-peer tracking (connectedAt, lastHeartbeat, bytesTransferred) instead of bare WebSocket refs
+- **Heartbeat**: ping/pong with configurable timeout (STALE_SESSION_TIMEOUT_MS=60s), automatic stale session cleanup
+- **Stats endpoint**: `/stats` returns per-session details (message count, bytes transferred, uptime, agent/viewer connected)
+- **CORS headers** on health/stats endpoints
+- **Graceful reconnection**: same role can reconnect to same session (old connection replaced)
+- **Counters**: totalConnections, totalSessionsCreated
+- Builds clean (`tsc` passes)
+
+**2. Agent rewrite (windows-agent/src/App.tsx)**
+- **Performance monitoring**: connection state (idle/connecting/connected/disconnected/failed), P2P/relay mode, video codec, bitrate, FPS, network RTT, total bytes sent
+- **WebRTC state tracking**: `onconnectionstatechange` updates the UI in real time
+- **FPS counter**: chunks per second, updated every 1s
+- **Bytes sent counter**: tracks all binary data sent over WS, displayed in MB
+- **Performance panel** in the agent UI showing all stats
+- Builds clean (54 modules, 252.41 KB)
+
+**3. Viewer rewrite (apps/app/.../devices/[deviceId]/page.tsx)**
+- **Right-side performance panel**: connection mode (P2P Direct / Relay / Connecting), latency with color-coded quality bar (green <50ms, yellow <150ms, red >150ms), FPS, codec, bitrate, data received
+- **Connection quality indicator**: Excellent/Good/Poor based on latency
+- **Data received counter**: tracks ArrayBuffer + Blob bytes, displayed in MB
+- **P2P mode detection**: updates from `webrtc_connected` message
+- Lint passes, no editor errors
+
+### Verification Done This Session
+- **Relay builds clean** — `tsc` passes
+- **Agent builds clean** — `npm run build` → 54 modules, 252.41 KB
+- **Viewer lint passes** — `biome lint` → no errors
+- **Pushed to GitHub** — `d258c00..cad616d main`
+
+### What's NOT done (honest)
+- **Not tested live** — the performance panels compile but haven't been validated in a real session
+- **Agent still won't start** — the Electron launch issue from earlier (cwd resets, npx installing wrong electron version) is still unresolved
+- **Relay not deployed** — still running locally via Cloudflare quick tunnel (ephemeral URL)
+- **Vercel deploy pending** — new viewer changes pushed but not yet deployed
+
+### Next Steps
+- Fix the Electron agent launch issue (use `npm run dev:electron` from the correct directory)
+- Test a full paired session with the new performance panels
+- Deploy the relay to the VM behind a named Cloudflare tunnel (production-readiness)
+
+---
+
+## Date: 2026-08-06
+
 ### What Was Done — Relay Exposed via Cloudflare Quick Tunnel (Production Relay URL)
 
 **Problem:** The deployed Vercel app's `NEXT_PUBLIC_RELAY_URL` was `ws://localhost:8080` — only works on the dev machine. Anyone else opening the deployed app couldn't connect to the relay (signaling server), so remote desktop sessions wouldn't work for them.
