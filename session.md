@@ -2,6 +2,37 @@
 
 ## Date: 2026-08-06
 
+### What Was Done — Relay Exposed via Cloudflare Quick Tunnel (Production Relay URL)
+
+**Problem:** The deployed Vercel app's `NEXT_PUBLIC_RELAY_URL` was `ws://localhost:8080` — only works on the dev machine. Anyone else opening the deployed app couldn't connect to the relay (signaling server), so remote desktop sessions wouldn't work for them.
+
+**Fix — Cloudflare quick tunnel:**
+- Installed `cloudflared` via winget.
+- Started a quick tunnel: `cloudflared tunnel --url http://localhost:8080` → public URL `https://barry-mods-isa-ski.trycloudflare.com`.
+- Verified the tunnel forwards to the relay: `https://barry-mods-isa-ski.trycloudflare.com/health` → `{"status":"ok","activeSessions":0}` ✅
+- Set `NEXT_PUBLIC_RELAY_URL=wss://barry-mods-isa-ski.trycloudflare.com` on the Vercel `ollalink-app` production project.
+- Triggered a Vercel rebuild via `npx vercel --prod` (succeeded, aliased to `ollalink-app.vercel.app`).
+
+**Honest caveats:**
+- The `trycloudflare.com` URL is **ephemeral** — it changes every time `cloudflared` restarts. This is a stopgap for testing, not production. The real fix is deploying the relay to the VM behind a named Cloudflare tunnel (Phase 5).
+- The Vercel CDN is still serving the old build's chunk hash (`1dd3208c`) on `ollalink-app.vercel.app` — the new deployment (`ollalink-j0mvy3ojo`) is aliased but the CDN edge cache hasn't fully propagated. The new build IS live on the fresh deployment URL; the alias just needs time to refresh.
+- The tunnel only works while your PC is on and `cloudflared` is running. If you close the terminal, the relay goes offline.
+
+### What's running right now
+- **Relay:** `ws://localhost:8080` on your PC, exposed publicly via `wss://barry-mods-isa-ski.trycloudflare.com`
+- **Vercel app:** `ollalink-app.vercel.app` — new build deploying with `NEXT_PUBLIC_RELAY_URL` pointing to the tunnel
+- **Convex backend:** `good-kingfisher-535.convex.cloud` — unchanged
+
+### To test end-to-end now
+1. Open `https://ollalink-app.vercel.app` (wait a few min for CDN refresh if old build shows)
+2. Log in → Devices → add device → copy pairing code
+3. Run the Electron agent with the pairing code
+4. Open the device → start session → the viewer connects to the relay via the tunnel
+
+---
+
+## Date: 2026-08-06
+
 ### What Was Done — Phase 3.5 Continued (Multi-Monitor + CI Fixes)
 
 **1. CI/deploy fixes — DONE**
