@@ -100,7 +100,7 @@ export const listMine = query({
       .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .order("desc")
       .collect();
-    return keys.map((k: { _id: string; name: string; prefix: string; revoked: boolean; createdAt: number }) => ({{
+    return keys.map((k: { _id: string; name: string; prefix: string; revoked: boolean; createdAt: number }) => ({
       _id: k._id,
       name: k.name,
       prefix: k.prefix,
