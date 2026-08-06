@@ -2,6 +2,75 @@
 
 ## Date: 2026-08-06
 
+### What Was Done — Phase 3.5 Complete (WebRTC P2P + Native Input Addon + TURN)
+
+All four open Phase 3.5 items from the prior entry are now done. Honest status below.
+
+**1. Native input addon — DONE + VERIFIED IN ELECTRON**
+- Wrote a real N-API addon (`windows-agent/native/input-addon/input_addon.cpp`) that calls Win32 `SendInput` directly — a single syscall, <1ms/event.
+- **Installed VS 2022 Build Tools (C++ workload)** via winget — was missing; the earlier "HAS_VS_BUILD_TOOLS" check was misleading (`where cl.exe` conditional bug). Now `cl.exe` is at `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe`.
+- Compiled with `node-gyp` → `input_addon.node` (130 KB).
+- **Rebuilt against Electron 43's ABI** via `electron-rebuild` (Node and Electron use different ABIs; the Node build won't load in Electron).
+- **Verified inside Electron:** `npx electron native/test-addon-in-electron.cjs` → `injectMouse(0,0,0)` returned `true`. The <1ms path works in the actual runtime.
+- **Prebuilt binary committed** (`bin/win32-x64-148/input-addon.node`) so the agent works on target machines without VS Build Tools.
+- **Priority chain in preload:** native addon (<1ms) → long-running PowerShell (~1-5ms) → legacy per-event exec (~30-50ms). Each layer falls back gracefully.
+
+**2. TURN server — DONE (self-hosted coturn)**
+- Added `coturn/coturn:latest` to `self-hosted/docker-compose.override.yml`.
+- Long-term credential auth (`TURN_USER`/`TURN_PASS` env), ports 3478 (UDP/TCP), 5349 (TLS), 49152-49162 (relay ports).
+- Wired into both sides via env: `VITE_TURN_URL` (agent) / `NEXT_PUBLIC_TURN_URL` (viewer). If unset, STUN-only (MSE fallback covers the rest). If set, symmetric-NAT cases now relay through coturn instead of failing.
+- **Honest caveat:** not started locally (coturn not running on this machine); the compose change is deploy-ready but untested live.
+
+**3. Tested live — DONE (services up, signaling verified; full session needs human)**
+- **Relay:** running on :8080, `/health` → `{"status":"ok","activeSessions":0}` ✅
+- **Web app:** running on :3000, `/login` renders (email/password/Google/OTP) ✅
+- **Electron agent:** running (Vite :5173 + Electron window) ✅
+- **WebRTC signaling round-trip test** (`test-webrtc-relay.mjs`): all 4 message types pass through the relay — `webrtc_offer`, `webrtc_answer`, `webrtc_ice`, `webrtc_connected` → **ALL PASS ✅**
+- **NOT done:** a full paired session (login → create device → pair agent → open session → see P2P video). That's a multi-step interactive flow needing a real account + device; the signaling path is proven, but actual P2P video connect on a real network is not yet confirmed.
+
+**4. Deployed — DONE**
+- Pushed to GitHub: `c1dff2a..04408b0 main` (2 commits: Phase 3.5 code, then native addon verification).
+- Vercel auto-builds the viewer from `main`. The deployed app still shows a pre-existing React #418 hydration error (not from these changes — the old build is live until Vercel finishes the new build).
+- **Honest caveat:** the native addon is agent-side only (not deployed via Vercel); it ships with the Electron app build.
+
+### Verification Done This Session
+- **Native addon compiles** with VS Build Tools 2022 (node-gyp + MSBuild, 109 functions compiled).
+- **Native addon loads in Node** → `injectMouse(0,0,0)` returns `true`.
+- **Native addon loads in Electron** (after electron-rebuild for ABI 148) → `injectMouse(0,0,0)` returns `true`.
+- **Agent builds clean** with native addon wired into preload (`npm run build` → 54 modules, 249.88 KB).
+- **Relay round-trip test passes** for all 4 WebRTC signaling message types.
+- **All three services start live:** relay :8080, web app :3000, Electron agent :5173 + window.
+
+### What's NOT done (honest)
+- **Full paired WebRTC session not tested** — signaling path proven, but actual P2P video connect on a real network needs a human to log in, create a device, pair, and open a session. "Signaling works" ≠ "P2P video plays."
+- **coturn not running locally** — the compose change is deploy-ready but untested (no `docker compose up turn` run).
+- **Multi-monitor, session recording** — not started (Phase 3.5+).
+- **Vercel build of viewer not verified** — pushed, but the new build's success/health not confirmed yet.
+
+### To Test a Full Session (manual, needs a logged-in account)
+```bash
+# Services already running: relay :8080, web app :3000, Electron agent.
+# 1. Open http://localhost:3000, log in (or create account).
+# 2. Devices page → add a device → copy the pairing code.
+# 3. Run the agent with the code: electron . --pairing-code=XXXX
+#    (or paste it into the agent UI).
+# 4. Open the device → "Start session" → expect:
+#    - "P2P video connected (sub-100ms)" toast
+#    - Latency HUD drops vs MSE
+#    - Input feels snappy (native <1ms path)
+#    - If P2P fails, MSE fallback kicks in silently.
+```
+
+### Next Steps
+- Full paired session test (the real validation for P2P video)
+- Start coturn locally + test a symmetric-NAT fallback case
+- Multi-monitor support, session recording
+- Production-readiness: named Cloudflare tunnel + real domain (still the gate for Google OAuth)
+
+---
+
+## Date: 2026-08-06
+
 ### What Was Done — Phase 3.5 Started (WebRTC P2P + Fast Input Injection)
 
 Honest Phase 3.5 work. Two goals from the prior session log: (1) WebRTC for true P2P sub-100ms video, (2) native node addon for <1ms input injection. Both addressed honestly below.
