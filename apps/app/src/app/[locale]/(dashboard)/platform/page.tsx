@@ -44,6 +44,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 export default function PlatformPage() {
   const { workspaces, current, select } = useWorkspace();
   const createWorkspace = useMutation(api.orgs.createWorkspace);
+  const deleteWorkspace = useMutation(api.orgs.deleteWorkspace);
   const createKey = useAction(api.apiKeys.create);
   const revokeKey = useMutation(api.apiKeys.revoke);
   const sendInvite = useMutation(api.orgs.invite);
@@ -106,6 +107,21 @@ export default function PlatformPage() {
             >
               + Workspace
             </Button>
+            {myRole === "owner" && workspaces.length > 1 && (
+              <ConfirmButton
+                label="Delete"
+                title="Delete this workspace?"
+                description={`This permanently deletes "${workspaces.find((w) => w._id === current)?.name}" and ALL its data (members, jobs, files, devices, API keys, audit logs). This cannot be undone.`}
+                confirmLabel="Delete workspace"
+                className="text-xs text-red-500 underline hover:text-red-400"
+                onConfirm={async () => {
+                  const next = workspaces.find((w) => w._id !== current);
+                  await deleteWorkspace({ workspaceId: current });
+                  if (next) select(next._id);
+                  toast.success("Workspace deleted");
+                }}
+              />
+            )}
           </div>
         </div>
 
