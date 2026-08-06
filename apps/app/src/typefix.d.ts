@@ -6,4 +6,4 @@
 // Id<string> issue without breaking GenericId->Id assignment, so this file
 // is now intentionally empty. Kept to avoid breaking the tsconfig include.
 
-export {};
+export type {};

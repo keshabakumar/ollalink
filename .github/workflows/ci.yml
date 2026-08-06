@@ -30,6 +30,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Build marketing site
+        env:
+          SKIP_ENV_VALIDATION: "1"
         run: bun run turbo build --filter=@v1/web
 
   # Dashboard app is currently blocked by a convex/auth generated-type mismatch.

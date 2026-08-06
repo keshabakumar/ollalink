@@ -169,7 +169,7 @@ export default function DeviceSessionPage() {
               } else if (msg.type === "clipboard" && typeof msg.text === "string") {
                 // Phase 3: agent pushed its clipboard → write to the viewer's clipboard.
                 try {
-                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                  if (navigator.clipboard?.writeText) {
                     navigator.clipboard.writeText(msg.text).catch(() => {});
                   }
                 } catch {}
