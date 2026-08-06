@@ -56,6 +56,14 @@ Picked up where the 2026-08-05 Phase 3 work left off. The session log listed thr
 - **Pushed to GitHub** — `f492da5..8d8a853 main -> main`.
 - **Vercel deploy verified live** — `https://ollalink-app.vercel.app/login` returns `200` (16.6 KB, fresh CSS/JS chunk hashes). Phase 3 viewer changes (latency HUD, adaptive bitrate, clipboard sync, "Send clipboard" button) are now live in production.
 
+### Delete Workspace Feature (commit `c785ac1`)
+- **Problem:** After creating a workspace on the Platform page, there was no way to delete it.
+- **Backend:** Added `deleteWorkspace` mutation to `packages/backend/convex/orgs.ts` — owner-only, hard-deletes the workspace and cascades through all related tables: members, invites, jobs, files, devices, deviceSessions, apiKeys, auditLogs, events, usage, counters. Honest caveat: `deviceSignals` has no `by_workspace` index so it's orphaned (harmless, cleaned up later).
+- **Frontend:** Added a "Delete" button on the Platform page next to "+ Workspace", visible only when `myRole === "owner"` and there's more than one workspace (prevents deleting the last workspace with no way to create a new one). Uses `ConfirmButton` with a clear warning that all data is permanently deleted. After deletion, auto-switches to the next available workspace.
+- **Deployed:**
+  - Convex backend: `npx convex deploy` to `good-kingfisher-535` (prod) — `deleteWorkspace` mutation live ✅
+  - Vercel frontend: pushed `c785ac1`, auto-built — site returns `200` ✅
+
 ### What's NOT done (honest)
 - **Native node addon for input injection** — still PowerShell `SendInput` (~30-50ms/event). Deferred to Phase 3.5 (needs node-addon-api / N-API toolchain).
 - **WebRTC (true P2P, sub-100ms)** — deferred to Phase 3.5. Current path is still relayed video over WebSocket + MSE, not P2P.

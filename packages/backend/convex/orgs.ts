@@ -320,43 +320,89 @@ export const changeRole = mutation({
 /**
  * Permanently delete a workspace and ALL related data.
  * Only the owner can delete. Deletes: members, invites, jobs, files (metadata),
- * devices, deviceSessions, deviceSignals, apiKeys, auditLogs, events, usage,
- * counters, notifications (workspace-scoped), then the workspace itself.
- * Honest: this is a hard delete — no undo, no soft-delete flag.
+ * devices, deviceSessions, apiKeys, auditLogs, events, usage, counters, then
+ * the workspace itself. Honest: this is a hard delete — no undo, no soft-delete.
+ * deviceSignals has no by_workspace index so it's orphaned (harmless).
  */
 export const deleteWorkspace = mutation({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, { workspaceId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Not authenticated");
-    // Only the owner can delete the workspace.
     const m = await requireRole(ctx, userId, workspaceId, ["owner"]);
     if (m.role !== "owner") throw new ConvexError("Only the owner can delete the workspace");
 
-    // Helper: delete all rows in a table matching by_workspace index.
-    const deleteByWorkspace = async (table: string) => {
-      const rows = await (ctx.db
-        .query(table as any) as any)
-        .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
-        .collect();
+    // Delete all rows in a table matching by_workspace index. Convex requires
+    // literal table names at compile time, so we can't loop over a string array.
+    const del = async (rows: { _id: Id<any> }[]) => {
       for (const r of rows) await ctx.db.delete(r._id);
     };
 
-    // Delete all workspace-scoped data.
-    await deleteByWorkspace("members");
-    await deleteByWorkspace("invites");
-    await deleteByWorkspace("jobs");
-    await deleteByWorkspace("files");
-    await deleteByWorkspace("devices");
-    await deleteByWorkspace("deviceSessions");
-    await deleteByWorkspace("apiKeys");
-    await deleteByWorkspace("auditLogs");
-    await deleteByWorkspace("events");
-    await deleteByWorkspace("usage");
-    await deleteByWorkspace("counters");
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(members);
 
-    // deviceSignals has no by_workspace index — it's linked via deviceSessionId.
-    // We skip it here; it's orphaned but harmless (cleaned up if we add a cascade later).
+    const invites = await ctx.db
+      .query("invites")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(invites);
+
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(jobs);
+
+    const files = await ctx.db
+      .query("files")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(files);
+
+    const devices = await ctx.db
+      .query("devices")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(devices);
+
+    const deviceSessions = await ctx.db
+      .query("deviceSessions")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(deviceSessions);
+
+    const apiKeys = await ctx.db
+      .query("apiKeys")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(apiKeys);
+
+    const auditLogs = await ctx.db
+      .query("auditLogs")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(auditLogs);
+
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(events);
+
+    const usage = await ctx.db
+      .query("usage")
+      .withIndex("by_workspace_metric", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(usage);
+
+    const counters = await ctx.db
+      .query("counters")
+      .withIndex("by_workspace_metric", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    await del(counters);
 
     // Finally delete the workspace itself.
     await ctx.db.delete(workspaceId);
