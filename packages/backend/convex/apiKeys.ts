@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
   action,
@@ -59,7 +60,7 @@ export const create = action({
     const key = genKey();
     await ctx.runMutation(internal.apiKeys.store, {
       workspaceId,
-      userId,
+      userId: userId as Id<"users">,
       name,
       prefix: key.slice(0, 11),
       hash: await sha256Hex(key),
@@ -93,13 +94,13 @@ export const listMine = query({
   handler: async (ctx, { workspaceId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
-    await requireMember(ctx, userId, workspaceId);
+    await requireMember(ctx, userId as Id<"users">, workspaceId);
     const keys = await ctx.db
       .query("apiKeys")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .order("desc")
       .collect();
-    return keys.map((k) => ({
+    return keys.map((k: any) => ({
       _id: k._id,
       name: k.name,
       prefix: k.prefix,
@@ -116,11 +117,11 @@ export const revoke = mutation({
     if (!userId) throw new Error("Not authenticated");
     const k = await ctx.db.get(id);
     if (!k) throw new Error("Not found");
-    if (k.workspaceId) await requireMember(ctx, userId, k.workspaceId);
+    if (k.workspaceId) await requireMember(ctx, userId as Id<"users">, k.workspaceId);
     else if (k.userId !== userId) throw new Error("Forbidden");
     await ctx.db.patch(id, { revoked: true });
     if (k.workspaceId)
-      await audit(ctx, k.workspaceId, userId, "apikey.revoke", { name: k.name });
+      await audit(ctx, k.workspaceId, userId as Id<"users">, "apikey.revoke", { name: k.name });
   },
 });
 

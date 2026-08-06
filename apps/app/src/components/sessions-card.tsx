@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@v1/backend/convex/_generated/api";
+import type { Id } from "@v1/backend/convex/_generated/dataModel";
 import { Button } from "@v1/ui/button";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -38,7 +39,7 @@ export function SessionsCard() {
         ) : sessions.length === 0 ? (
           <p className="px-6 py-4 text-sm text-primary/40">No sessions</p>
         ) : (
-          sessions.map((s) => (
+          sessions.map((s: any) => (
             <div
               key={s._id}
               className="flex items-center justify-between px-6 py-3 text-sm"
@@ -56,7 +57,7 @@ export function SessionsCard() {
                   type="button"
                   className="text-xs text-red-500 underline"
                   onClick={async () => {
-                    await revokeSession({ sessionId: s._id });
+                    await revokeSession({ sessionId: s._id as Id<"authSessions"> });
                     toast.success("Session revoked");
                   }}
                 >

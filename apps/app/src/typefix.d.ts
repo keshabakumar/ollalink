@@ -1,12 +1,9 @@
-// Temporary workaround for a convex / @convex-dev/auth version mismatch that
-// causes generated DataModel types to emit Id<string> instead of Id<TableName>.
-// This override lets the dashboard build until the dependency pair is aligned.
+// Temporary workaround for a convex / @convex-dev/auth version mismatch.
+// Originally this augmented GenericId with __tableName: string to make Id<string>
+// structurally compatible with Id<TableName>. But that breaks the reverse:
+// GenericId<"users"> (from getAuthUserId) becomes incompatible with Id<"users">
+// (expected by requireMember/audit). The casts at call sites handle the
+// Id<string> issue without breaking GenericId->Id assignment, so this file
+// is now intentionally empty. Kept to avoid breaking the tsconfig include.
 
-declare module "convex/values" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface GenericId<TableName> {
-    // Using string instead of the table-specific literal makes Id types
-    // structurally compatible, which is required by the corrupted generated types.
-    __tableName: string;
-  }
-}
+export {};
