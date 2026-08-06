@@ -343,8 +343,8 @@ export const deleteWorkspace = mutation({
 
     // Delete all rows in a table matching by_workspace index. Convex requires
     // literal table names at compile time, so we can't loop over a string array.
-    const del = async (rows: { _id: string }) => {
-      for (const r of rows) await ctx.db.delete(r._id);
+    const del = async (rows: { _id: string }[]) => {
+      for (const r of rows) await ctx.db.delete(r._id as Id<"_storage">);
     };
 
     const members = await ctx.db

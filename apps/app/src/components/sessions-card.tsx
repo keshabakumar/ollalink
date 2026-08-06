@@ -39,7 +39,8 @@ export function SessionsCard() {
         ) : sessions.length === 0 ? (
           <p className="px-6 py-4 text-sm text-primary/40">No sessions</p>
         ) : (
-          sessions.map((s: Record<string, unknown>) => (
+          // biome-ignore lint/suspicious/noExplicitAny: query return type is inferred as any due to stale Convex generated types
+          sessions.map((s: any) => (
             <div
               key={s._id}
               className="flex items-center justify-between px-6 py-3 text-sm"

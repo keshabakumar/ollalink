@@ -44,7 +44,8 @@ export function NotificationsBell() {
             </div>
             <div className="max-h-80 divide-y divide-border/50 overflow-y-auto">
               {notifications?.length ? (
-                notifications.map((n: Record<string, unknown>) => (
+                // biome-ignore lint/suspicious/noExplicitAny: query return type is inferred as any due to stale Convex generated types
+                notifications.map((n: any) => (
                   <div key={n._id} className="px-3 py-2 text-sm">
                     <p className="font-medium text-primary/80">{n.title}</p>
                     {n.body && <p className="text-xs text-primary/50">{n.body}</p>}
