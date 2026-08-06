@@ -3,12 +3,12 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy only the relay package — no monorepo root, no workspace deps.
-COPY package.json ./
+COPY apps/relay/package.json ./
 RUN npm install
 
 # Copy source and build.
-COPY tsconfig.json ./
-COPY src ./src
+COPY apps/relay/tsconfig.json ./
+COPY apps/relay/src ./src
 RUN npm run build
 
 # Prune dev deps.
