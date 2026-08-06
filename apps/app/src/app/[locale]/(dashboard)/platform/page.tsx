@@ -124,7 +124,6 @@ export default function PlatformPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <input
-                  autoFocus
                   value={wsName}
                   onChange={(e) => setWsName(e.target.value)}
                   onKeyDown={(e) => {
@@ -158,8 +157,8 @@ export default function PlatformPage() {
                         toast.success("Workspace created");
                         setCreateOpen(false);
                         setWsName("");
-                      } catch (err: any) {
-                        toast.error(err?.message || "Failed to create workspace");
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Failed to create workspace");
                       } finally {
                         setCreating(false);
                       }

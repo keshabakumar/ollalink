@@ -39,7 +39,7 @@ export function SessionsCard() {
         ) : sessions.length === 0 ? (
           <p className="px-6 py-4 text-sm text-primary/40">No sessions</p>
         ) : (
-          sessions.map((s: any) => (
+          sessions.map((s: Record<string, unknown>) => (
             <div
               key={s._id}
               className="flex items-center justify-between px-6 py-3 text-sm"
