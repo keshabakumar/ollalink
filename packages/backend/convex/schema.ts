@@ -131,7 +131,7 @@ export default defineSchema({
     name: v.string(),
     ownerId: v.id("users"),
     createdAt: v.number(),
-  }),
+  }).index("by_owner", ["ownerId"]),
   members: defineTable({
     workspaceId: v.id("workspaces"),
     userId: v.id("users"),

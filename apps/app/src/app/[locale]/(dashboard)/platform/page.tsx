@@ -6,6 +6,14 @@ import { useWorkspace } from "@/lib/useWorkspace";
 import { api } from "@v1/backend/convex/_generated/api";
 import type { Id } from "@v1/backend/convex/_generated/dataModel";
 import { Button } from "@v1/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@v1/ui/dialog";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -54,6 +62,9 @@ export default function PlatformPage() {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [wsName, setWsName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const scoped = current ? { workspaceId: current } : "skip";
   const members = useQuery(api.orgs.members, scoped);
@@ -97,16 +108,68 @@ export default function PlatformPage() {
             </select>
             <Button
               variant="outline"
-              onClick={async () => {
-                const name = window.prompt("New workspace name");
-                if (name) {
-                  select(await createWorkspace({ name }));
-                  toast.success("Workspace created");
-                }
+              onClick={() => {
+                setWsName("");
+                setCreateOpen(true);
               }}
             >
               + Workspace
             </Button>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create new workspace</DialogTitle>
+                  <DialogDescription>
+                    Enter a unique name for your new workspace.
+                  </DialogDescription>
+                </DialogHeader>
+                <input
+                  autoFocus
+                  value={wsName}
+                  onChange={(e) => setWsName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      (document.getElementById("create-ws-btn") as HTMLButtonElement)?.click();
+                    }
+                  }}
+                  placeholder="Workspace name"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    id="create-ws-btn"
+                    disabled={creating || !wsName.trim()}
+                    onClick={async () => {
+                      const name = wsName.trim();
+                      if (!name) return;
+                      // Client-side duplicate check for instant feedback.
+                      if (workspaces.some((w) => w.name.toLowerCase() === name.toLowerCase())) {
+                        toast.error("A workspace with this name already exists");
+                        return;
+                      }
+                      setCreating(true);
+                      try {
+                        const id = await createWorkspace({ name });
+                        select(id);
+                        toast.success("Workspace created");
+                        setCreateOpen(false);
+                        setWsName("");
+                      } catch (err: any) {
+                        toast.error(err?.message || "Failed to create workspace");
+                      } finally {
+                        setCreating(false);
+                      }
+                    }}
+                  >
+                    {creating ? "Creating…" : "Create"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             {myRole === "owner" && workspaces.length > 1 && (
               <ConfirmButton
                 label="Delete"

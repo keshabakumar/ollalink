@@ -69,7 +69,16 @@ export const createWorkspace = mutation({
   handler: async (ctx, { name }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-    return createWorkspaceImpl(ctx, userId, name);
+    // Reject duplicate workspace names for the same user.
+    const trimmed = name.trim();
+    if (!trimmed) throw new ConvexError("Workspace name cannot be empty");
+    const existing = await ctx.db
+      .query("workspaces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .filter((q) => q.eq(q.field("name"), trimmed))
+      .first();
+    if (existing) throw new ConvexError("A workspace with this name already exists");
+    return createWorkspaceImpl(ctx, userId, trimmed);
   },
 });
 
