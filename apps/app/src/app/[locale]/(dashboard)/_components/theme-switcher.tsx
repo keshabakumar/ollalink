@@ -11,10 +11,16 @@ import { useEffect, useState } from "react";
 
 export function ThemeSwitcher({ triggerClass }: { triggerClass?: string }) {
   const { theme: currentTheme, setTheme, themes } = useTheme();
+  // Fix React #418: useTheme() returns undefined on the server but the resolved
+  // theme on the client, so the icon/label mismatch. Gate on mounted so both
+  // server and first client render agree (show the System/monitor placeholder).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const theme = mounted ? currentTheme : undefined;
   return (
     <Select
-      value={currentTheme}
-      onValueChange={(theme) => setTheme(theme as (typeof themes)[number])}
+      value={theme}
+      onValueChange={(t) => setTheme(t as (typeof themes)[number])}
     >
       <SelectTrigger
         className={cn(
@@ -23,28 +29,28 @@ export function ThemeSwitcher({ triggerClass }: { triggerClass?: string }) {
         )}
       >
         <div className="flex items-start gap-2">
-          {currentTheme === "light" ? (
+          {theme === "light" ? (
             <Sun className="h-[14px] w-[14px]" />
-          ) : currentTheme === "dark" ? (
+          ) : theme === "dark" ? (
             <Moon className="h-[14px] w-[14px]" />
           ) : (
             <Monitor className="h-[14px] w-[14px]" />
           )}
-          {currentTheme && (
+          {theme && (
             <span className="text-xs font-medium">
-              {currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1)}
+              {theme.charAt(0).toUpperCase() + theme.slice(1)}
             </span>
           )}
         </div>
       </SelectTrigger>
       <SelectContent>
-        {themes.map((theme) => (
+        {themes.map((t) => (
           <SelectItem
-            key={theme}
-            value={theme}
-            className={`text-sm font-medium text-primary/60 ${theme === currentTheme && "text-primary"}`}
+            key={t}
+            value={t}
+            className={`text-sm font-medium text-primary/60 ${t === theme && "text-primary"}`}
           >
-            {theme && theme.charAt(0).toUpperCase() + theme.slice(1)}
+            {t && t.charAt(0).toUpperCase() + t.slice(1)}
           </SelectItem>
         ))}
       </SelectContent>

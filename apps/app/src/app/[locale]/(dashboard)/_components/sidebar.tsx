@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -46,6 +46,12 @@ export function Sidebar() {
   const user = useQuery(api.users.getUser);
   const { workspaces, current, select } = useWorkspace();
   const [open, setOpen] = useState(false);
+  // Fix React #418 hydration mismatch: the workspace is resolved from localStorage
+  // in a client-only useEffect, so the server renders current=null ("Loading…")
+  // while the client renders the real workspace name. Gate the Select behind a
+  // mounted flag so both server and first client render agree on "Loading…".
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const Body = (
     <div className="flex h-full w-60 flex-col border-r border-border bg-card">
@@ -59,14 +65,14 @@ export function Sidebar() {
           Workspace
         </span>
         <Select
-          value={(current ?? "") as string}
+          value={(mounted ? (current ?? "") : "") as string}
           onValueChange={(value) => select(value as unknown as Id<"workspaces">)}
-          disabled={workspaces.length === 0 || user === undefined}
+          disabled={!mounted || workspaces.length === 0 || user === undefined}
         >
           <SelectTrigger className="w-full text-sm">
             <SelectValue
               placeholder={
-                workspaces.length === 0 ? "Loading…" : "Select workspace"
+                !mounted || workspaces.length === 0 ? "Loading…" : "Select workspace"
               }
             />
           </SelectTrigger>
