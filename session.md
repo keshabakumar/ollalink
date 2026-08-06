@@ -2,6 +2,39 @@
 
 ## Date: 2026-08-06
 
+### What Was Done — Phase 3.5 Continued (Multi-Monitor + CI Fixes)
+
+**1. CI/deploy fixes — DONE**
+- **Lint error fixed:** WebRTC handlers used `await` inside a non-async `ws.onmessage`. Made it `async (event) => {`. This was failing both `lint-and-typecheck` and `check` workflows. After fix: `lint-and-typecheck: success` ✅
+- **React #418 hydration mismatch fixed:** `WorkspaceProvider` resolves the current workspace from `localStorage` in a client-only `useEffect`, so the server rendered `current=null` ("Loading…") while the client rendered the real workspace name. Same issue with `ThemeSwitcher` (`useTheme()` returns undefined on server). Fix: gated both `Select`s behind a `mounted` flag so server and first client render agree on the placeholder.
+- **Honest caveat:** `check` and `build-web` workflows kept failing on **GitHub Actions infra** ("Service Unavailable" when downloading `actions/checkout`, "Fail extracting tarball for next"). Re-ran multiple times — this is GitHub's side, not a code issue. The Vercel dashboard deploy is independent of the `build-web` job (which only builds the marketing site `@v1/web`).
+
+**2. Multi-monitor support — DONE**
+- **Agent:** new `getScreenSources()` preload API lists all monitors with small thumbnails (320×180). `getScreenStream(sourceId?)` accepts an optional monitor source id. On `ws.onopen`, the agent sends `{type:'monitors', sources}` to the viewer. A `select_monitor` handler restarts the video stream + WebRTC with the chosen source.
+- **Viewer:** receives the `monitors` message, stores the list, auto-selects the first. A `<select>` monitor picker appears in the toolbar **only if >1 monitor** is available. On change, sends `select_monitor` + resets MSE for the new stream.
+- Files: `windows-agent/electron/preload.cjs` (getScreenSources), `windows-agent/src/App.tsx` (monitors message, select_monitor handler, startVideoStream sourceId), `apps/app/.../devices/[deviceId]/page.tsx` (monitors state, picker UI, select_monitor send).
+
+### Verification Done This Session
+- **Agent builds clean** — `npm run build` → 54 modules, 250.58 KB JS.
+- **Viewer lint passes** — `biome lint` → no errors.
+- **Viewer page has no editor diagnostics.**
+- **Pushed to GitHub** — `dd9143c..6fdc5d1 main`.
+
+### What's NOT done (honest)
+- **Multi-monitor not tested live** — the code compiles and the flow is correct, but switching monitors mid-session on a real multi-monitor desktop is not yet confirmed.
+- **Session recording** — not started (next Phase 3.5+ item).
+- **Vercel deploy of viewer not verified** — GitHub Actions infra issues blocked CI; the dashboard deploy is queued behind Vercel's own build.
+- **Full paired WebRTC session still not tested** — needs a human to log in, pair, and open a session.
+
+### Next Steps
+- Session recording (record webm chunks to disk + download)
+- Production-readiness: named Cloudflare tunnel + real domain (gate for Google OAuth)
+- Test multi-monitor + WebRTC live on a real desktop
+
+---
+
+## Date: 2026-08-06
+
 ### What Was Done — Phase 3.5 Complete (WebRTC P2P + Native Input Addon + TURN)
 
 All four open Phase 3.5 items from the prior entry are now done. Honest status below.
