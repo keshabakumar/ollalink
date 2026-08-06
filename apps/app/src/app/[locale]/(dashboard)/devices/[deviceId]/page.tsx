@@ -27,6 +27,16 @@ export default function DeviceSessionPage() {
   // Phase 3.5: multi-monitor — list of monitors from the agent + selected one.
   const [monitors, setMonitors] = useState<{ id: string; name: string; thumbnail?: string }[]>([]);
   const [selectedMonitor, setSelectedMonitor] = useState<string | null>(null);
+  // Performance monitoring: connection state, mode, latency breakdown, data received.
+  const [perfStats, setPerfStats] = useState({
+    connectionMode: "connecting", // "p2p" | "relay" | "connecting" | "disconnected"
+    latency: 0,
+    fps: 0,
+    codec: "VP8",
+    bitrate: 1_500_000,
+    dataReceived: 0,
+  });
+  const dataReceivedRef = useRef(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const mseRef = useRef<{ mediaSource: MediaSource; sourceBuffer: SourceBuffer; queue: ArrayBuffer[]; lastFrameAt: number; frameCount: number } | null>(null);
@@ -94,7 +104,9 @@ export default function DeviceSessionPage() {
     mse.frameCount++;
     const now = Date.now();
     if (now - mse.lastFrameAt >= 1000) {
-      setFps(mse.frameCount);
+      const fps = mse.frameCount;
+      setFps(fps);
+      setPerfStats(prev => ({ ...prev, fps, dataReceived: dataReceivedRef.current }));
       mse.frameCount = 0;
       mse.lastFrameAt = now;
     }
@@ -155,6 +167,9 @@ export default function DeviceSessionPage() {
                 if (!selectedMonitor && msg.sources.length > 0) {
                   setSelectedMonitor(msg.sources[0].id);
                 }
+              } else if (msg.type === "webrtc_connected") {
+                // Agent confirmed P2P is active.
+                setPerfStats(prev => ({ ...prev, connectionMode: "p2p" }));
               } else if (msg.type === "peer_disconnected") {
                 toast.warning("Windows Agent disconnected");
                 setStatus("disconnected");
@@ -162,6 +177,7 @@ export default function DeviceSessionPage() {
                 // Phase 3: compute RTT from the echoed timestamp.
                 const rtt = Date.now() - msg.t;
                 setLatency(rtt);
+                setPerfStats(prev => ({ ...prev, latency: rtt }));
                 // Track RTT history for adaptive bitrate decisions.
                 const hist = rttHistoryRef.current;
                 hist.push(rtt);
@@ -253,9 +269,13 @@ export default function DeviceSessionPage() {
             }
           } else if (event.data instanceof ArrayBuffer) {
             // Phase 3: append webm chunk to MSE SourceBuffer
+            dataReceivedRef.current += event.data.byteLength;
             appendChunk(event.data);
           } else if (event.data instanceof Blob) {
-            event.data.arrayBuffer().then(appendChunk);
+            event.data.arrayBuffer().then((buf) => {
+              dataReceivedRef.current += buf.byteLength;
+              appendChunk(buf);
+            });
           }
         };
 
@@ -494,6 +514,51 @@ export default function DeviceSessionPage() {
           }`}
         />
       </main>
+
+           {/* Performance monitoring panel — right sidebar */}
+      <aside className="flex w-64 shrink-0 flex-col border-l border-slate-800 bg-slate-900 p-4 text-xs text-slate-300">
+        <div className="mb-3 border-b border-slate-800 pb-2">
+          <h3 className="text-sm font-semibold text-slate-100">Session Stats</h3>
+        </div>
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Mode</span>
+            <span className={`font-medium ${perfStats.connectionMode === "p2p" ? "text-green-400" : perfStats.connectionMode === "relay" ? "text-blue-400" : "text-slate-400"}`}>
+              {perfStats.connectionMode === "p2p" ? "P2P Direct" : perfStats.connectionMode === "relay" ? "Relay" : "Connecting…"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Latency</span>
+            <span className={`font-medium ${latency < 50 ? "text-green-400" : latency < 150 ? "text-yellow-400" : "text-red-400"}`}>
+              {latency}ms
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">FPS</span>
+            <span className="font-medium text-slate-200">{fps}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Codec</span>
+            <span className="font-medium text-slate-200">{perfStats.codec}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Bitrate</span>
+            <span className="font-medium text-slate-200">{(perfStats.bitrate / 1_000_000).toFixed(1)} Mbps</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Data received</span>
+            <span className="font-medium text-slate-200">{(perfStats.dataReceived / 1_048_576).toFixed(1)} MB</span>
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-slate-800 pt-3">
+          <div className="mb-2 text-[10px] uppercase tracking-wide text-slate-600">Connection Quality</div>
+          <div className="flex items-center gap-2">
+            <div className={`h-2 flex-1 rounded-full ${latency < 50 ? "bg-green-500" : latency < 150 ? "bg-yellow-500" : "bg-red-500"}`} />
+            <span className="text-[10px] text-slate-500">{latency < 50 ? "Excellent" : latency < 150 ? "Good" : "Poor"}</span>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

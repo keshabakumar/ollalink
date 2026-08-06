@@ -14,6 +14,28 @@ function App() {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
+  // Performance monitoring: per-stage latency, bitrate, fps, connection state.
+  const [perfStats, setPerfStats] = useState<{
+    connectionState: string;
+    p2pActive: boolean;
+    videoCodec: string;
+    bitrate: number;
+    fps: number;
+    captureMs: number;
+    encodeMs: number;
+    networkMs: number;
+    totalBytesSent: number;
+  }>({
+    connectionState: 'idle',
+    p2pActive: false,
+    videoCodec: 'VP8',
+    bitrate: 1_500_000,
+    fps: 0,
+    captureMs: 0,
+    encodeMs: 0,
+    networkMs: 0,
+    totalBytesSent: 0,
+  });
 
   // These state values are written for future UI use; reference them so noUnusedLocals passes.
   void consecutiveFailures;
@@ -40,6 +62,10 @@ function App() {
   const agentPcRef = useRef<RTCPeerConnection | null>(null);
   const agentStreamRef = useRef<MediaStream | null>(null);
   const agentP2pActiveRef = useRef<boolean>(false);
+  // Performance tracking refs.
+  const bytesSentRef = useRef<number>(0);
+  const frameCountRef = useRef<number>(0);
+  const lastFpsUpdateRef = useRef<number>(Date.now());
 
   const cleanupAgentSession = () => {
     if (agentWsRef.current) {
@@ -69,9 +95,12 @@ function App() {
     }
     agentStreamRef.current = null;
     agentP2pActiveRef.current = false;
+    bytesSentRef.current = 0;
+    frameCountRef.current = 0;
     lastClipboardRef.current = '';
     currentAgentSessionRef.current = null;
     setAgentSessionId(null);
+    setPerfStats(prev => ({ ...prev, connectionState: 'idle', p2pActive: false, fps: 0, totalBytesSent: 0 }));
   };
 
   const connectAgentSession = async (sessionId: string) => {
@@ -211,6 +240,7 @@ function App() {
           // MediaRecorder fallback to save bandwidth.
           if (msg.type === 'webrtc_connected') {
             agentP2pActiveRef.current = true;
+            setPerfStats(prev => ({ ...prev, p2pActive: true, connectionState: 'connected' }));
             const recorder = agentRecorderRef.current;
             if (recorder && recorder.state === 'recording') {
               try { recorder.stop(); } catch {}
@@ -287,10 +317,10 @@ function App() {
 
     pc.onconnectionstatechange = () => {
       console.log('[Agent] WebRTC state:', pc.connectionState);
+      setPerfStats(prev => ({ ...prev, connectionState: pc.connectionState, p2pActive: agentP2pActiveRef.current }));
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        // P2P failed — the MSE fallback (MediaRecorder) is still running, so the
-        // viewer keeps getting video. No action needed here.
         agentP2pActiveRef.current = false;
+        setPerfStats(prev => ({ ...prev, p2pActive: false }));
       }
     };
 
@@ -316,7 +346,23 @@ function App() {
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          const sendStart = Date.now();
           ws.send(e.data);
+          bytesSentRef.current += e.data.size;
+          frameCountRef.current++;
+          // Update FPS every second.
+          const now = Date.now();
+          if (now - lastFpsUpdateRef.current >= 1000) {
+            const fps = frameCountRef.current;
+            frameCountRef.current = 0;
+            lastFpsUpdateRef.current = now;
+            setPerfStats(prev => ({
+              ...prev,
+              fps,
+              totalBytesSent: bytesSentRef.current,
+              networkMs: Date.now() - sendStart,
+            }));
+          }
         }
       };
 
@@ -641,6 +687,34 @@ function App() {
             <button onClick={handleDisconnect} className="btn-secondary">
               Disconnect
             </button>
+            {/* Performance monitoring panel */}
+            <div style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', fontSize: '12px' }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px', opacity: 0.7 }}>Session Performance</div>
+              <div className="stat-row">
+                <span>Connection:</span>
+                <strong>{perfStats.connectionState} {perfStats.p2pActive ? '(P2P)' : '(Relay)'}</strong>
+              </div>
+              <div className="stat-row">
+                <span>Codec:</span>
+                <strong>{perfStats.videoCodec}</strong>
+              </div>
+              <div className="stat-row">
+                <span>Bitrate:</span>
+                <strong>{(perfStats.bitrate / 1_000_000).toFixed(1)} Mbps</strong>
+              </div>
+              <div className="stat-row">
+                <span>FPS:</span>
+                <strong>{perfStats.fps}</strong>
+              </div>
+              <div className="stat-row">
+                <span>Network RTT:</span>
+                <strong>{perfStats.networkMs}ms</strong>
+              </div>
+              <div className="stat-row">
+                <span>Data sent:</span>
+                <strong>{(perfStats.totalBytesSent / 1_048_576).toFixed(1)} MB</strong>
+              </div>
+            </div>
           </div>
         )}
       </div>
