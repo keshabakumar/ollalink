@@ -25,7 +25,7 @@ function loadNativeInput() {
 // Long-running PowerShell injector script and process management.
 const INPUT_PS_SCRIPT = `
 $ErrorActionPreference = 'SilentlyContinue'
-Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport("user32.dll")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public MOUSEINPUT mi;[FieldOffset(8)]public KEYBDINPUT ki;}[StructLayout(LayoutKind.Sequential)]public struct MOUSEINPUT{public int dx;public int dy;public uint flags;public uint time;public IntPtr extra;}[StructLayout(LayoutKind.Sequential)]public struct KEYBDINPUT{public ushort wVk;public ushort scan;public uint flags;public uint time;public IntPtr extra;}}'
+Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class I{[DllImport(\"user32.dll\")]public static extern uint SendInput(uint n,INPUT[] i,int s);[StructLayout(LayoutKind.Explicit)]public struct INPUT{[FieldOffset(0)]public int type;[FieldOffset(8)]public MOUSEINPUT mi;[FieldOffset(8)]public KEYBDINPUT ki;}[StructLayout(LayoutKind.Sequential)]public struct MOUSEINPUT{public int dx;public int dy;public uint mouseData;public uint flags;public uint time;public IntPtr extra;}[StructLayout(LayoutKind.Sequential)]public struct KEYBDINPUT{public ushort wVk;public ushort scan;public uint flags;public uint time;public IntPtr extra;}}'
 $mi = New-Object I+MOUSEINPUT
 $ki = New-Object I+KEYBDINPUT
 $miInput = New-Object I+INPUT
@@ -48,6 +48,15 @@ while ($line = [Console]::In.ReadLine()) {
       $ki.flags = [uint32]$parts[2]
       $kiInput.ki = $ki
       [I]::SendInput(1, @($kiInput), 40) | Out-Null
+    }
+    'W' {
+      # Mouse wheel: $parts[1]=dx $parts[2]=dy $parts[3]=delta (WHEEL_DELTA=120)
+      $mi.dx = 0
+      $mi.dy = 0
+      $mi.flags = 0x0800 # MOUSEEVENTF_WHEEL
+      $mi.mouseData = [uint32]$parts[3]
+      $miInput.mi = $mi
+      [I]::SendInput(1, @($miInput), 40) | Out-Null
     }
   }
 }
@@ -121,6 +130,24 @@ function injectInputFast(event) {
         addon.injectKey(vk, flags);
         return;
       }
+      // Wheel/scroll — send a mouse wheel event via the native addon.
+      // The addon exposes injectWheel(deltaX, deltaY) if available.
+      if (type === 'wheel' || type === 'scroll') {
+        const dx = Math.round(event.deltaX || 0);
+        const dy = Math.round(event.deltaY || event.wheelDelta || 0);
+        if (dx === 0 && dy === 0) return;
+        try {
+          if (addon.injectWheel) {
+            addon.injectWheel(dx, dy);
+          } else {
+            // Fallback: SendInput mouse wheel (WHEEL_DELTA = 120)
+            addon.injectMouse(dx, dy, 0x0800); // MOUSEEVENTF_WHEEL
+          }
+        } catch (err) {
+          console.error('[Input] wheel inject failed:', err.message);
+        }
+        return;
+      }
       return;
     } catch (err) {
       console.error('[Input] native inject failed, falling back to PowerShell:', err.message);
@@ -147,6 +174,13 @@ function injectInputFast(event) {
     if (vk == null) return;
     const flags = down ? 0 : 0x0002;
     line = `K ${vk} ${flags}`;
+  } else if (type === 'wheel' || type === 'scroll') {
+    // Mouse wheel via SendInput. WHEEL_DELTA = 120.
+    const dx = Math.round(event.deltaX || 0);
+    const dy = Math.round(event.deltaY || event.wheelDelta || 0);
+    if (dx === 0 && dy === 0) return;
+    // Encode as a wheel event: W 0 0 <delta> (we only support vertical wheel via PS)
+    line = `W 0 0 ${dy}`;
   }
   if (line) {
     try {
