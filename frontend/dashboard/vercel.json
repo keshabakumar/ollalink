@@ -1,3 +1,5 @@
 {
-  "buildCommand": "cd ../../frontend/dashboard && turbo run build --force"
+  "buildCommand": "cd ../.. && turbo run build --filter=@v1/app --force",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
 }

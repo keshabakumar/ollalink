@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../../frontend/dashboard && turbo run build --filter=@v1/app --force",
+  "buildCommand": "turbo run build --filter=@v1/app --force",
   "outputDirectory": "frontend/dashboard/.next",
   "framework": "nextjs",
   "ignoreCommand": "git log -1 --pretty=%B | grep -q \"[skip deploy]\" && echo \"skip\" || echo \"\""
