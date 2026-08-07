@@ -62,3 +62,6 @@ target/
 tmp/
 .vercel
 .env*
+
+.vercel
+.env*

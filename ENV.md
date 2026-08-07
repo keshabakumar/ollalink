@@ -23,17 +23,6 @@ Validated by `src/env.mjs` (t3-env). Copy to `.env.local`.
 | `PORT` | optional | Next.js dev port (default 3000) |
 | `VERCEL_URL` | optional | Auto-set by Vercel previews |
 
-## `frontend/marketing` (marketing) — `frontend/marketing/.env.example`
-
-Validated by `src/env.ts` (t3-env). Copy to `.env.local`.
-
-| Variable | Required | Description |
-| --- | --- | --- |
-| `NEXT_PUBLIC_CONVEX_URL` | ✅ | Convex deployment URL |
-| `NEXT_PUBLIC_APP_URL` | optional | Dashboard URL (header links) |
-| `NEXT_PUBLIC_CAL_LINK` | optional | Cal.com booking link |
-| `NEXT_PUBLIC_OPENPANEL_CLIENT_ID` | optional | OpenPanel client id |
-
 ## `backend/convex` (Convex) — `backend/convex/.env.example`
 
 Validated by `convex/env.ts` (t3-env, gated on `VALIDATE_ENV`). Set on the

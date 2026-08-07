@@ -51,8 +51,7 @@ opinionated monorepo that grows with your business.
 ```
 .
 ├── frontend/                    # 🖥️  Frontend apps (workspace: frontend/*)
-│    ├── dashboard               # @v1/app  — Next.js dashboard (port 3000)
-│    └── marketing              # @v1/web  — Next.js marketing site (port 3001)
+│    └── dashboard               # @v1/app  — Next.js dashboard (port 3000)
 ├── backend/                     # ⚙️  Backend services (workspace: backend/*)
 │    ├── convex                  # @v1/backend — Convex (API, Auth, DB, Jobs, JWKS, Billing)
 │    ├── relay                   # @v1/relay — WebSocket relay for WebRTC (port 8080)
@@ -119,7 +118,6 @@ for the full list per package.
 
 ```bash
 cp frontend/dashboard/.env.example frontend/dashboard/.env.local
-cp frontend/marketing/.env.example frontend/marketing/.env.local
 cp backend/relay/.env.example backend/relay/.env
 # Convex backend vars are set on the dashboard or via `convex env set`:
 #   see backend/convex/.env.example

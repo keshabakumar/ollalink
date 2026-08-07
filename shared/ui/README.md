@@ -1,6 +1,6 @@
 # @v1/ui
 
-Shared shadcn/Radix UI component library used by `frontend/dashboard` and `frontend/marketing`.
+Shared shadcn/Radix UI component library used by `frontend/dashboard`.
 
 ## Usage
 

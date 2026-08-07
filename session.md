@@ -2,6 +2,56 @@
 
 ## Date: 2026-08-07
 
+### What Was Done — Fixed marketing site Vercel deploy (two issues)
+
+The marketing site (`ollalink` project) had never successfully deployed — all prior deploys were "Canceled". Two pre-existing issues (not caused by the reorg) surfaced after fixing the root directory:
+
+**1. `vercel.json` ran `npx convex deploy` during build** — required `CONVEX_DEPLOY_KEY` (not set on Vercel), failing immediately. Fixed: build command now just `turbo run build --filter=@v1/web` (Convex deploys separately via CI/scripts). Commit `4bc6919`.
+
+**2. `ConvexReactClient` crashed at build time** — `convex-client-provider.tsx` instantiated `new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL)` at module load, but `NEXT_PUBLIC_CONVEX_URL` is unset on Vercel → `No address provided to ConvexReactClient` during static prerender of `/`, `/privacy`, `/terms`. Fixed: lazy-init the client and render children without a provider when the URL is absent (the marketing site is static, no Convex queries at build). Commit `fccb505`.
+
+**Result:** Marketing site deployed successfully → **https://ollalink-liard.vercel.app** ✅ (Ready in 2m).
+
+Both Vercel projects now live:
+- Dashboard: https://ollalink-app.vercel.app ✅
+- Marketing: https://ollalink-liard.vercel.app ✅
+
+### What Was Done — Updated Vercel project Root Directory + deployed
+
+- Used the Vercel CLI (authenticated as `keshabakumar`) to update both projects' Root Directory settings via `vercel project update`:
+  - `ollalink-app`: `apps/app → frontend/dashboard` ✅
+  - `ollalink` (marketing): `Auto → frontend/marketing` ✅
+- Triggered a production deploy of the dashboard (`bunx vercel --prod --yes`) — **build succeeded**:
+  - `@v1/app:build` 1 successful task (33s), Build Completed in 60s.
+  - Live at **https://ollalink-app.vercel.app** (aliased from `ollalink-fg1m07p3e-...`).
+- No issues: the build picked up the new `frontend/dashboard` root and the `vercel.json` build command (`turbo run build --filter=@v1/app`) resolved correctly.
+
+### What Was Done — Fixed Vercel deploy after reorganization
+
+- **Problem**: Vercel build failed — `The specified Root Directory "apps/app" does not exist` (the folder moved to `frontend/dashboard`).
+- **Fix (code)**: Updated all three `vercel.json` files for the new layout:
+  - `vercel.json` (repo root): `buildCommand` → `turbo run build --filter=@v1/app` (no `cd` needed when root is repo root); `outputDirectory` → `frontend/dashboard/.next`.
+  - `frontend/dashboard/vercel.json`: `buildCommand` → `cd ../.. && turbo run build --filter=@v1/app` (works when Vercel Root Directory = `frontend/dashboard`).
+  - `frontend/marketing/vercel.json`: fixed relative paths for the new layout.
+- **Fix (dashboard)**: Vercel Project Settings → General → Root Directory must be changed from `apps/app` to `frontend/dashboard` in the Vercel dashboard (can't be set from `vercel.json`).
+- **Verified**: `bunx turbo run build --filter=@v1/app --dry-run` resolves `@v1/app` → `frontend\dashboard` correctly.
+- Committed `d7f642b`, pushed `a9f0634..d7f642b main -> main`.
+
+### What Was Done — Fixed @v1/typescript subpath resolution
+
+- **Problem**: `frontend/dashboard/tsconfig.json` (and 6 other tsconfigs) showed `File '@v1/typescript/nextjs.json' not found` in the editor.
+- **Root cause**: The `@v1/typescript` package (moved to `shared/tooling-typescript/`) had no `exports` field in its `package.json`, so Bun/VS Code couldn't resolve subpath imports like `@v1/typescript/nextjs.json`. It worked before only via legacy root fallback.
+- **Fix**: Added an `exports` map to `shared/tooling-typescript/package.json` exposing `./base.json`, `./nextjs.json`, `./react-library.json`.
+- **Verified**: `bun typecheck` 6/6 successful; editor error cleared after restarting the TS server (`typescript.restartTsServer`).
+- Committed `a9f0634`, pushed `1b5496b..a9f0634 main -> main`.
+
+### What Was Done — Committed + pushed the reorganization
+
+- Staged all 551 changed files (`git add -A`); git detected all moves as 100% renames (no duplicate content).
+- Committed as `1b5496b` — "Reorganize monorepo into domain-based layout (frontend/backend/shared)" with a full summary in the body.
+- Pushed to `origin/main` — `480c299..1b5496b main -> main` (success, no issues).
+- No issues encountered: CRLF→LF line-ending warnings on commit were harmless normalization; no untracked files left behind; branch was up to date with origin before push.
+
 ### What Was Done — Domain-based reorganization (frontend/backend/shared)
 
 Reorganized the whole monorepo into a domain-based layout so anyone can identify the frontend, backend, and shared code at a glance. Verified references before every move, updated every path reference (configs, deploy scripts, CI, docs), then confirmed with `bun install` + `bun typecheck` + `bun lint` (6/6 green, sherif "No issues found").

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Run both Next apps as systemd services (auto-restart, start on boot).
-# app -> :3000, web -> :3001, bound to 0.0.0.0.
+# Run the Next.js dashboard as a systemd service (auto-restart, start on boot).
+# app -> :3000, bound to 0.0.0.0.
 set -euo pipefail
 BUN=/root/.bun/bin/bun
 
@@ -14,25 +14,6 @@ Type=simple
 WorkingDirectory=/opt/ollalink/frontend/dashboard
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=HOSTNAME=0.0.0.0
-ExecStart=${BUN} run start
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat > /etc/systemd/system/ollalink-web.service <<EOF
-[Unit]
-Description=Ollalink marketing site (Next.js, frontend/marketing)
-After=network.target docker.service
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/ollalink/frontend/marketing
-Environment=NODE_ENV=production
-Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0
 ExecStart=${BUN} run start
 Restart=always

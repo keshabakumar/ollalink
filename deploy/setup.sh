@@ -125,7 +125,6 @@ systemctl enable --now ollalink-app.service ollalink-echo.service
 echo
 echo "==> DONE for HOST=$HOST"
 echo "    Dashboard:        http://${HOST}:3000"
-echo "    Marketing site:   http://${HOST}:3001"
 echo "    Convex dashboard: http://${HOST}:6791  (deployment URL http://${HOST}:3210)"
 echo "    Admin key:        $(grep CONVEX_SELF_HOSTED_ADMIN_KEY "$REPO/backend/convex/.env.local" | cut -d= -f2-)"
 echo "    (Sign-in OTP is logged to the Convex dashboard until RESEND_API_KEY is set.)"

@@ -14,7 +14,7 @@ monorepo built on **Next.js** (apps) + **Convex** (backend) + a standalone
 ```
                         ┌─────────────────────────────────────────────┐
                         │                  Browser                     │
-                        │ frontend/dashboard   frontend/marketing      │
+                        │ frontend/dashboard (dashboard)              │
                         └───────────────┬───────────────┬─────────────┘
                                         │               │
                           Convex JWT (DIRECT)    Convex actions (PROXY)
@@ -66,8 +66,7 @@ backend, and shared code at a glance:
 ```
 ollalink/
 ├── frontend/                  # 🖥️  Frontend apps (workspace: frontend/*)
-│   ├── dashboard/             # @v1/app  — Next.js dashboard (port 3000)
-│   └── marketing/             # @v1/web  — Next.js marketing site (port 3001)
+│   └── dashboard/             # @v1/app  — Next.js dashboard (port 3000)
 ├── backend/                    # ⚙️  Backend services (workspace: backend/*)
 │   ├── convex/                 # @v1/backend — Convex functions + schema (the API)
 │   ├── relay/                  # @v1/relay — WebSocket relay for WebRTC (port 8080)
@@ -98,7 +97,7 @@ ollalink/
 ```
 
 > **Where is…?**
-> - **Frontend** → `frontend/dashboard` (the app) + `frontend/marketing` (the site)
+> - **Frontend** → `frontend/dashboard` (the app)
 > - **Backend (API)** → `backend/convex` (Convex functions, schema, auth, JWKS)
 > - **Backend (realtime)** → `backend/relay` (WebSocket relay)
 > - **Backend (reference)** → `backend/reference-api` (the swappable echo backend)
@@ -155,21 +154,10 @@ frontend/dashboard/
 - **DIRECT**: browser → backend with the Convex JWT; backend verifies via JWKS.
 - **PROXY**: browser → Convex action → backend with a service key + userId.
 
-### `frontend/marketing` — `@v1/web` (marketing)
+### `frontend/marketing` — REMOVED
 
-Static marketing site. Simpler than `dashboard` — no dashboard, no auth forms.
-
-```
-frontend/marketing/src/
-├── app/
-│   ├── layout.tsx / page.tsx        # Landing page
-│   ├── privacy/ terms/ talk-to-us/  # Static pages
-│   ├── manifest.ts / robots.ts / sitemap.ts
-│   └── opengraph-image.png / twitter-image.png
-├── components/header.tsx
-├── fonts/
-└── env.ts                          # t3-env validated env vars
-```
+The marketing site (`@v1/web`) has been removed. The dashboard (`frontend/dashboard`)
+is the only frontend app now.
 
 ### `backend/relay` — `@v1/relay`
 
@@ -362,7 +350,6 @@ From the repo root (Bun):
 ```bash
 bun install                  # install all workspace deps
 bun dev                      # turbo dev --parallel (all apps)
-bun dev:web                  # only @v1/web
 bun dev:app                  # only @v1/app
 bun build                    # turbo build
 bun test                     # turbo test --parallel

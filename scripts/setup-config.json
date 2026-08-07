@@ -8,10 +8,6 @@
       "ignoreLogs": ["✖ Environment variable"]
     },
     {
-      "id": "web",
-      "envFile": "frontend/marketing/.env"
-    },
-    {
       "id": "app",
       "envFile": "frontend/dashboard/.env"
     }
@@ -23,7 +19,7 @@
       "variables": [
         {
           "name": "NEXT_PUBLIC_APP_URL",
-          "projects": ["web"],
+          "projects": ["app"],
           "details": "This is the URL of the app, used for linking from the web app.",
           "defaultValue": "http://localhost:3000"
         }
@@ -37,7 +33,7 @@
       "variables": [
         {
           "name": "NEXT_PUBLIC_CONVEX_URL",
-          "projects": ["web", "app"],
+          "projects": ["app"],
           "details": "You can find your Convex DeploymentURL in the Convex dashboard under 'Settings' > 'URL & Deploy Key'. It should look like 'https://example-123.convex.cloud'.",
           "template": "{{convexUrl}}",
           "defaultValue": "https://example-123.convex.cloud"
