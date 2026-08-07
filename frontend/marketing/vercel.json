@@ -1,4 +1,5 @@
 {
-  "buildCommand": "cd ../.. && cd backend/convex && npx convex deploy --cmd 'cd ../frontend/marketing && turbo run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",
+  "buildCommand": "cd ../.. && turbo run build --filter=@v1/web --force",
+  "outputDirectory": ".next",
   "framework": "nextjs"
 }
