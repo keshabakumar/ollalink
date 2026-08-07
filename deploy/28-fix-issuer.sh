@@ -17,10 +17,10 @@ EOF
 ( cd /opt/ollalink/self-hosted && docker compose up -d --force-recreate )
 sleep 6
 
-sed -i 's#^CONVEX_SITE_URL=.*#CONVEX_SITE_URL=http://10.1.30.14:3211#' /opt/ollalink/backend-echo/.env
+sed -i 's#^CONVEX_SITE_URL=.*#CONVEX_SITE_URL=http://10.1.30.14:3211#' /opt/ollalink/backend/reference-api/.env
 systemctl restart ollalink-echo
 
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 "$NODE" "$CVX" deploy -y 2>&1 | tail -3
 echo "CONVEX_SITE_URL=$("$NODE" "$CVX" env get CONVEX_SITE_URL 2>&1 | tail -1)"
 echo FIX_ISSUER_DONE

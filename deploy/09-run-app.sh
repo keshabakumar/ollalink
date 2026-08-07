@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Build apps/app (the dashboard) under Node and run it as a systemd service on :3000.
+# Build frontend/dashboard (the dashboard app) under Node and run it as a systemd service on :3000.
 set -uo pipefail
 NODE=/usr/bin/node
 NEXT=/opt/ollalink/node_modules/next/dist/bin/next
 VM_IP=10.1.30.14
 
-echo "=== write apps/app/.env ==="
-cat > /opt/ollalink/apps/app/.env <<EOF
+echo "=== write frontend/dashboard/.env ==="
+cat > /opt/ollalink/frontend/dashboard/.env <<EOF
 NEXT_PUBLIC_CONVEX_URL=http://${VM_IP}:3210
 NEXT_PUBLIC_OPENPANEL_CLIENT_ID=
 OPENPANEL_SECRET_KEY=
@@ -17,8 +17,8 @@ SENTRY_ORG=
 SENTRY_PROJECT=
 EOF
 
-echo "=== build apps/app (Node) ==="
-cd /opt/ollalink/apps/app
+echo "=== build frontend/dashboard (Node) ==="
+cd /opt/ollalink/frontend/dashboard
 set -e
 "$NODE" "$NEXT" build
 set +e
@@ -26,12 +26,12 @@ set +e
 echo "=== systemd unit (Next under Node) ==="
 cat > /etc/systemd/system/ollalink-app.service <<'UNIT'
 [Unit]
-Description=Ollalink dashboard (Next.js apps/app)
+Description=Ollalink dashboard (Next.js frontend/dashboard)
 After=network.target docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/ollalink/apps/app
+WorkingDirectory=/opt/ollalink/frontend/dashboard
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=0.0.0.0

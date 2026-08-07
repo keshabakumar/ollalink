@@ -17,11 +17,46 @@
         "typescript": "^5.5.4",
       },
     },
-    "apps/agent-win-archive": {
-      "name": "@v1/agent-win",
-      "version": "0.1.0",
+    "backend/convex": {
+      "name": "@v1/backend",
+      "version": "1.0.0",
+      "dependencies": {
+        "@auth/core": "0.41.1",
+        "@convex-dev/auth": "^0.0.94",
+        "@convex-dev/polar": "npm:@erquhart/convex-polar@0.2.0-alpha.5",
+        "@polar-sh/sdk": "^0.26.1",
+        "convex": "^1.19.2",
+        "convex-helpers": "^0.1.63",
+        "nodemailer": "^8.0.11",
+        "openai": "^4.61.1",
+        "standardwebhooks": "^1.0.0",
+      },
+      "devDependencies": {
+        "@types/nodemailer": "^8.0.1",
+      },
     },
-    "apps/app": {
+    "backend/reference-api": {
+      "name": "@v1/reference-api",
+      "version": "0.1.0",
+      "dependencies": {
+        "jose": "^5.6.3",
+      },
+    },
+    "backend/relay": {
+      "name": "@v1/relay",
+      "version": "0.1.0",
+      "dependencies": {
+        "dotenv": "^16.4.5",
+        "ws": "^8.18.0",
+      },
+      "devDependencies": {
+        "@types/node": "^22",
+        "@types/ws": "^8.5.12",
+        "tsx": "^4.19.1",
+        "typescript": "^5.5.4",
+      },
+    },
+    "frontend/dashboard": {
       "name": "@v1/app",
       "version": "0.1.0",
       "dependencies": {
@@ -59,21 +94,7 @@
         "typescript": "^5.5.4",
       },
     },
-    "apps/relay": {
-      "name": "@v1/relay",
-      "version": "0.1.0",
-      "dependencies": {
-        "dotenv": "^16.4.5",
-        "ws": "^8.18.0",
-      },
-      "devDependencies": {
-        "@types/node": "^22",
-        "@types/ws": "^8.5.12",
-        "tsx": "^4.19.1",
-        "typescript": "^5.5.4",
-      },
-    },
-    "apps/web": {
+    "frontend/marketing": {
       "name": "@v1/web",
       "version": "0.1.0",
       "dependencies": {
@@ -96,7 +117,7 @@
         "typescript": "^5.5.4",
       },
     },
-    "packages/analytics": {
+    "shared/analytics": {
       "name": "@v1/analytics",
       "version": "1.0.0",
       "dependencies": {
@@ -105,25 +126,7 @@
         "@vercel/functions": "^1.4.1",
       },
     },
-    "packages/backend": {
-      "name": "@v1/backend",
-      "version": "1.0.0",
-      "dependencies": {
-        "@auth/core": "0.41.1",
-        "@convex-dev/auth": "^0.0.94",
-        "@convex-dev/polar": "npm:@erquhart/convex-polar@0.2.0-alpha.5",
-        "@polar-sh/sdk": "^0.26.1",
-        "convex": "^1.19.2",
-        "convex-helpers": "^0.1.63",
-        "nodemailer": "^8.0.11",
-        "openai": "^4.61.1",
-        "standardwebhooks": "^1.0.0",
-      },
-      "devDependencies": {
-        "@types/nodemailer": "^8.0.1",
-      },
-    },
-    "packages/email": {
+    "shared/email": {
       "name": "@v1/email",
       "version": "0.1.0",
       "dependencies": {
@@ -134,14 +137,17 @@
         "react-email": "^3.0.6",
       },
     },
-    "packages/logger": {
+    "shared/logger": {
       "name": "@v1/logger",
       "version": "0.1.0",
       "dependencies": {
         "pino": "^9.3.2",
       },
     },
-    "packages/ui": {
+    "shared/tooling-typescript": {
+      "name": "@v1/typescript",
+    },
+    "shared/ui": {
       "name": "@v1/ui",
       "version": "0.1.0",
       "dependencies": {
@@ -170,12 +176,6 @@
         "typescript": "^5.5.4",
       },
     },
-    "tooling/typescript": {
-      "name": "@v1/typescript",
-    },
-  },
-  "overrides": {
-    "convex": "1.19.2",
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
@@ -782,25 +782,25 @@
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
-    "@v1/agent-win": ["@v1/agent-win@workspace:apps/agent-win-archive"],
+    "@v1/analytics": ["@v1/analytics@workspace:shared/analytics"],
 
-    "@v1/analytics": ["@v1/analytics@workspace:packages/analytics"],
+    "@v1/app": ["@v1/app@workspace:frontend/dashboard"],
 
-    "@v1/app": ["@v1/app@workspace:apps/app"],
+    "@v1/backend": ["@v1/backend@workspace:backend/convex"],
 
-    "@v1/backend": ["@v1/backend@workspace:packages/backend"],
+    "@v1/email": ["@v1/email@workspace:shared/email"],
 
-    "@v1/email": ["@v1/email@workspace:packages/email"],
+    "@v1/logger": ["@v1/logger@workspace:shared/logger"],
 
-    "@v1/logger": ["@v1/logger@workspace:packages/logger"],
+    "@v1/reference-api": ["@v1/reference-api@workspace:backend/reference-api"],
 
-    "@v1/relay": ["@v1/relay@workspace:apps/relay"],
+    "@v1/relay": ["@v1/relay@workspace:backend/relay"],
 
-    "@v1/typescript": ["@v1/typescript@workspace:tooling/typescript"],
+    "@v1/typescript": ["@v1/typescript@workspace:shared/tooling-typescript"],
 
-    "@v1/ui": ["@v1/ui@workspace:packages/ui"],
+    "@v1/ui": ["@v1/ui@workspace:shared/ui"],
 
-    "@v1/web": ["@v1/web@workspace:apps/web"],
+    "@v1/web": ["@v1/web@workspace:frontend/marketing"],
 
     "@vercel/functions": ["@vercel/functions@1.6.0", "", { "peerDependencies": { "@aws-sdk/credential-provider-web-identity": "*" }, "optionalPeers": ["@aws-sdk/credential-provider-web-identity"] }, "sha512-R6FKQrYT5MZs5IE1SqeCJWxMuBdHawFcCZboKKw8p7s+6/mcd55Gx6tWmyKnQTyrSEA04NH73Tc9CbqpEle8RA=="],
 
@@ -1236,7 +1236,7 @@
 
     "jiti": ["jiti@1.21.7", "", { "bin": { "jiti": "bin/jiti.js" } }, "sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A=="],
 
-    "jose": ["jose@6.2.8", "", {}, "sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ=="],
+    "jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
 
     "js-beautify": ["js-beautify@1.15.3", "", { "dependencies": { "config-chain": "^1.1.13", "editorconfig": "^1.0.4", "glob": "^10.4.2", "js-cookie": "^3.0.5", "nopt": "^8.0.0" }, "bin": { "css-beautify": "js/bin/css-beautify.js", "html-beautify": "js/bin/html-beautify.js", "js-beautify": "js/bin/js-beautify.js" } }, "sha512-rKKGuyTxGNlyN4EQKWzNndzXpi0bOl8Gl8YQAW1as/oMz0XhD6sHJO1hTvoBDOSzKuJb9WkwoAb34FfdkKMv2A=="],
 
@@ -1712,6 +1712,8 @@
 
     "@ampproject/remapping/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.25", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ=="],
 
+    "@auth/core/jose": ["jose@6.2.8", "", {}, "sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ=="],
+
     "@babel/generator/@babel/parser": ["@babel/parser@7.26.9", "", { "dependencies": { "@babel/types": "^7.26.9" }, "bin": "./bin/babel-parser.js" }, "sha512-81NWa1njQblgZbQHxWHpxxCzNsa3ZwvFqpUg7P+NNUU6f3UU2jBEg4OlF/J6rl8+PQGh1q6/zWScd001YwcA5A=="],
 
     "@babel/generator/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.25", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ=="],
@@ -1719,8 +1721,6 @@
     "@babel/template/@babel/parser": ["@babel/parser@7.26.9", "", { "dependencies": { "@babel/types": "^7.26.9" }, "bin": "./bin/babel-parser.js" }, "sha512-81NWa1njQblgZbQHxWHpxxCzNsa3ZwvFqpUg7P+NNUU6f3UU2jBEg4OlF/J6rl8+PQGh1q6/zWScd001YwcA5A=="],
 
     "@babel/traverse/@babel/parser": ["@babel/parser@7.26.9", "", { "dependencies": { "@babel/types": "^7.26.9" }, "bin": "./bin/babel-parser.js" }, "sha512-81NWa1njQblgZbQHxWHpxxCzNsa3ZwvFqpUg7P+NNUU6f3UU2jBEg4OlF/J6rl8+PQGh1q6/zWScd001YwcA5A=="],
-
-    "@convex-dev/auth/jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
 
     "@isaacs/cliui/strip-ansi": ["strip-ansi@7.1.0", "", { "dependencies": { "ansi-regex": "^6.0.1" } }, "sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ=="],
 

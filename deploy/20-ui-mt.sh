@@ -5,15 +5,15 @@ NODE=/usr/bin/node
 NEXT=/opt/ollalink/node_modules/next/dist/bin/next
 
 echo "=== place UI files ==="
-cp /tmp/useWorkspace.ts /opt/ollalink/apps/app/src/lib/useWorkspace.ts
-mkdir -p "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/platform"
-cp /tmp/platform_page.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/platform/page.tsx"
-cp /tmp/jobs_page.tsx     "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/jobs/page.tsx"
-cp /tmp/navigation.tsx    "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/_components/navigation.tsx"
+cp /tmp/useWorkspace.ts /opt/ollalink/frontend/dashboard/src/lib/useWorkspace.ts
+mkdir -p "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/platform"
+cp /tmp/platform_page.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/platform/page.tsx"
+cp /tmp/jobs_page.tsx     "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/jobs/page.tsx"
+cp /tmp/navigation.tsx    "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/_components/navigation.tsx"
 echo ok
 
 echo "=== rebuild dashboard (Node) ==="
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 "$NODE" "$NEXT" build
 
 echo "=== restart ==="

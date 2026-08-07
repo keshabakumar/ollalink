@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up self-hosted Convex (backend + dashboard) on the VM with production origins,
-# then generate an admin key and wire it into packages/backend/.env.local.
+# then generate an admin key and wire it into backend/convex/.env.local.
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
 
@@ -41,8 +41,8 @@ ADMIN_KEY=$(docker compose exec -T backend ./generate_admin_key.sh 2>/dev/null |
 [ -n "$ADMIN_KEY" ] || { echo "FAILED to capture admin key"; exit 1; }
 echo "admin key captured (length ${#ADMIN_KEY})"
 
-echo "=== write /opt/ollalink/packages/backend/.env.local ==="
-cat > /opt/ollalink/packages/backend/.env.local <<EOF
+echo "=== write /opt/ollalink/backend/convex/.env.local ==="
+cat > /opt/ollalink/backend/convex/.env.local <<EOF
 # Convex CLI -> local self-hosted backend on this VM.
 CONVEX_SELF_HOSTED_URL='http://127.0.0.1:3210'
 CONVEX_SELF_HOSTED_ADMIN_KEY='${ADMIN_KEY}'

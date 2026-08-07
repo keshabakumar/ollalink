@@ -37,7 +37,7 @@ jobs:
         run: |
           KEY=$(cd self-hosted && docker compose exec -T backend ./generate_admin_key.sh | tr -d '\r' | grep -F '|' | tail -1 | tr -d '[:space:]')
           node scripts/generateKeys.mjs
-          cd packages/backend
+          cd backend/convex
           export CONVEX_SELF_HOSTED_URL='http://127.0.0.1:3210' CONVEX_SELF_HOSTED_ADMIN_KEY="$KEY"
           CVX="node ../../node_modules/convex/bin/main.js"
           $CVX env set -- JWKS "$(cat /tmp/jwks)"
@@ -73,7 +73,7 @@ jobs:
         run: |
           KEY=$(cd self-hosted && docker compose exec -T backend ./generate_admin_key.sh | tr -d '\r' | grep -F '|' | tail -1 | tr -d '[:space:]')
           node scripts/generateKeys.mjs
-          cd packages/backend
+          cd backend/convex
           export CONVEX_SELF_HOSTED_URL='http://127.0.0.1:3210' CONVEX_SELF_HOSTED_ADMIN_KEY="$KEY"
           CVX="node ../../node_modules/convex/bin/main.js"
           $CVX env set -- JWKS "$(cat /tmp/jwks)"
@@ -86,14 +86,14 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: http://127.0.0.1:3210
           CONVEX_URL: http://127.0.0.1:3210
-        run: cd apps/app && bun run build
+        run: cd frontend/dashboard && bun run build
       - name: Start app
         env:
           NEXT_PUBLIC_CONVEX_URL: http://127.0.0.1:3210
           CONVEX_URL: http://127.0.0.1:3210
           PORT: "3000"
         run: |
-          cd apps/app
+          cd frontend/dashboard
           bun run start > /tmp/app.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://localhost:3000/en/login >/dev/null && echo "app up" && break; sleep 2; done
       - name: Install Playwright

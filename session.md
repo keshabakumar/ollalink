@@ -1,5 +1,81 @@
 # Session Log — Ollalink
 
+## Date: 2026-08-07
+
+### What Was Done — Domain-based reorganization (frontend/backend/shared)
+
+Reorganized the whole monorepo into a domain-based layout so anyone can identify the frontend, backend, and shared code at a glance. Verified references before every move, updated every path reference (configs, deploy scripts, CI, docs), then confirmed with `bun install` + `bun typecheck` + `bun lint` (6/6 green, sherif "No issues found").
+
+**New layout:**
+```
+frontend/   dashboard/ (@v1/app, :3000)  marketing/ (@v1/web, :3001)
+backend/    convex/ (@v1/backend, the API)  relay/ (@v1/relay, :8080)  reference-api/ (:4000)
+shared/     ui/  email/  analytics/  logger/  tooling-typescript/
+```
+
+**Moves:**
+- `apps/app` → `frontend/dashboard`; `apps/web` → `frontend/marketing`
+- `packages/backend` → `backend/convex`; `apps/relay` → `backend/relay`; `backend-echo` → `backend/reference-api`
+- `packages/ui` → `shared/ui`; `packages/email` → `shared/email`; `packages/analytics` → `shared/analytics`; `packages/logger` → `shared/logger`; `tooling/typescript` → `shared/tooling-typescript`
+- Removed now-empty `apps/`, `packages/`, `tooling/` dirs.
+
+**Path references updated (every one verified):**
+- `package.json` workspaces: `packages/*, apps/*, tooling/*` → `shared/*, shared/tooling-typescript, frontend/*, backend/*`
+- `vercel.json` (root + both apps), `render.yaml`, `biome.json`, `.gitignore`, `backend/relay/Dockerfile`
+- tailwind content paths (`../../packages/ui` → `../../shared/ui`)
+- 50 deploy scripts: bulk-replaced `/opt/ollalink/{apps,packages,backend-echo}` → `/opt/ollalink/{frontend,backend}` via .NET `string.Replace` (first attempt with `-replace` backslash-escaped forward slashes and `Set-Content -NoNewline` failed on older PowerShell — redone correctly with `[System.IO.File]::WriteAllText`)
+- `deploy/setup.sh`, `deploy/05-build-apps.sh`, `deploy/06-systemd.sh`, `deploy/09-run-app.sh`, `deploy/03-convex-up.sh`, `deploy/db-check.sh` (also fixed a stale WSL `/mnt/c/...` path)
+- `.github/workflows/e2e.yml`, `scripts/setup-config.json`, `scripts/TEMPLATE.md`
+- self-hosted READMEs, e2e/README, backend/convex/README, shared/*/README, ROADMAP.md
+
+**New scaffolding:**
+- `frontend/README.md`, `backend/README.md`, `shared/README.md` — each explains what's inside and "which is the backend?"
+- `backend/reference-api/package.json` — added so it's a valid workspace member (sherif was warning it had no package.json); declares `jose` dep.
+
+**Docs rewritten:** `ARCHITECTURE.md` (overview diagram, tech stack table, repo tree with a "Where is…?" guide, all per-section headers + paths, data flow, commands), `README.md` (directory structure + env-setup), `ENV.md` (section headers).
+
+**Verification:**
+- `bun install` → 9 packages installed, lockfile saved.
+- `bun typecheck` → 6/6 successful. (Pre-existing stale Convex `_generated/` type errors remain — now at `../../backend/convex/convex/...` paths, confirming the move — tolerated by the `@v1/app` typecheck script, not caused by this reorg.)
+- `bun lint` → 6/6 successful; Biome no issues; sherif "No issues found" (after adding reference-api/package.json).
+
+### What Was Done — Source reorganization (file/folder moves)
+
+Executed the reorganization step that was deferred earlier this session. Verified references before every move, then ran `bun install` + `bun typecheck` + `bun lint` to confirm nothing broke (6/6 tasks green, sherif "No issues found").
+
+**Moves:**
+- **Root scratch files → `scripts/`**: `test-auth.json`, `test-query.json`, `test-signup.json`, `test-otp-action.mjs`, `setup-config.json`, `TEMPLATE.md`, `set-jwks.mjs`, `set-jwks.ps1`. Added `scripts/README.md`.
+- **Deploy one-offs → `deploy/helpers/`**: `_cleanup.sh`, `_cleanup2.sh`, `_resources.sh`, `_verify-admin.sh`, `_otpcap_test.sh`, `p4-faults.sh`, `bootstrap_glitchtip.py`, `discover_glitchtip.py`, `verify_glitch.py`. Added `deploy/helpers/README.md`. Numbered runbook (01–53) + `setup.sh`/`backup.sh`/`db-check.sh`/`generateKeys.mjs` stay in `deploy/`.
+- **Archive folders → `archive/`**: `apps/agent-win-archive` → `archive/agent-win-archive/`; `convex-ready-template-main` → `archive/convex-ready-template-main/`. Added `archive/README.md`.
+
+**Path fixes after moves:**
+- `scripts/set-jwks.mjs` — `import.meta.dirname` path now `../archive/convex-ready-template-main/...`.
+- `scripts/set-jwks.ps1` — absolute paths updated to `D:\ollalink\archive\...`.
+
+**Workspace impact:**
+- `agent-win-archive` was a Bun workspace member (`@v1/agent-win` under `apps/*`). Moving it out removed it from the workspace. Verified nothing in the active codebase imports `@v1/agent-win` (grep empty). `bun install` regenerated `bun.lock` — "1 package removed", sherif clean.
+
+**Docs updated:** `ARCHITECTURE.md` (repo tree + the `apps/agent-win-archive`, `deploy/`, `scripts/`, `convex-ready-template-main/` sections), `README.md` (directory structure). Historical `session.md` entries left as-is.
+
+**Verification:**
+- `bun install` → lockfile saved, 1 package removed.
+- `bun typecheck` → 6/6 successful. (Pre-existing stale Convex `_generated/` type errors remain, tolerated by the `@v1/app` typecheck script — not caused by this reorg.)
+- `bun lint` → 6/6 successful; Biome no issues; sherif "No issues found".
+
+### What Was Done — Full codebase structuring (docs + scaffolding)
+
+- Explored the entire monorepo (apps, packages, tooling, deploy, e2e, self-hosted, windows-agent, backend-echo) and read all package.json/tsconfig files to map the real layout.
+- Created `ARCHITECTURE.md` — single source of truth: overview diagram, tech stack, full repo tree, per-app/per-package breakdown, data flow (auth, multi-tenancy, realtime streaming, jobs), commands, env summary, and conventions.
+- Created `ENV.md` — validated reference for every env var across apps/app, apps/web, packages/backend, apps/relay, backend-echo, windows-agent, self-hosted.
+- Added missing package READMEs: `packages/backend`, `packages/ui`, `packages/email`, `packages/analytics`, `packages/logger`, `tooling/typescript`.
+- Added missing app READMEs: `apps/app` (dashboard), `apps/web` (marketing), `apps/relay`.
+- Added missing `.env.example` files: `packages/backend`, `apps/relay`, `backend-echo`.
+- Updated root `README.md` directory-structure section to match the real (richer) layout and added pointers to ARCHITECTURE.md / ENV.md; expanded the env-setup step.
+
+### Discussion
+- User asked to "make full code base structured" and selected all four goals (document, reorganize, standardize configs, add scaffolding) across all scopes, output written in-repo.
+- Scope of this turn: documentation + missing scaffolding (READMEs, .env.examples). No source files were moved/renamed and no configs were rewritten — those are higher-risk changes that should be reviewed per-package before applying. ARCHITECTURE.md now gives the map to drive any future reorganization.
+
 ## Date: 2026-08-06
 
 ### What Was Done — Relay + Agent + Viewer Rewrite with Performance Monitoring

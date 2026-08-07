@@ -3,8 +3,8 @@
 set -uo pipefail
 NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cd /opt/ollalink/packages/backend
-set -a; . /opt/ollalink/backend-echo/.env; set +a
+cd /opt/ollalink/backend/convex
+set -a; . /opt/ollalink/backend/reference-api/.env; set +a
 
 echo "=== PROXY PATH: Convex action -> echo backend (service key + userId) ==="
 "$NODE" "$CVX" run backend:callBackendInternal \

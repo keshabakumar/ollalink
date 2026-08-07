@@ -3,7 +3,7 @@
 # and set deployment env vars referenced by auth.config.ts / env.ts.
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$PATH"
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 
 echo "=== set deployment env vars ==="
 # CONVEX_SITE_URL is a built-in self-hosted var (= CONVEX_SITE_ORIGIN), don't override it.

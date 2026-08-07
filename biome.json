@@ -4,7 +4,7 @@
     "enabled": true
   },
   "linter": {
-    "ignore": ["node_modules", ".next", "packages/tsconfig", "packages/email/.react-email"],
+    "ignore": ["node_modules", ".next", "shared/tooling-typescript", "shared/email/.react-email"],
     "enabled": true,
     "rules": {
       "recommended": true,

@@ -5,16 +5,16 @@ NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== place files ==="
-cp /tmp/schema.ts  /opt/ollalink/packages/backend/convex/schema.ts
-cp /tmp/audit.ts   /opt/ollalink/packages/backend/convex/audit.ts
-cp /tmp/usage.ts   /opt/ollalink/packages/backend/convex/usage.ts
-cp /tmp/apiKeys.ts /opt/ollalink/packages/backend/convex/apiKeys.ts
-cp /tmp/orgs.ts    /opt/ollalink/packages/backend/convex/orgs.ts
-cp /tmp/http.ts    /opt/ollalink/packages/backend/convex/http.ts
-cp /tmp/jobs.ts    /opt/ollalink/packages/backend/convex/jobs.ts
+cp /tmp/schema.ts  /opt/ollalink/backend/convex/convex/schema.ts
+cp /tmp/audit.ts   /opt/ollalink/backend/convex/convex/audit.ts
+cp /tmp/usage.ts   /opt/ollalink/backend/convex/convex/usage.ts
+cp /tmp/apiKeys.ts /opt/ollalink/backend/convex/convex/apiKeys.ts
+cp /tmp/orgs.ts    /opt/ollalink/backend/convex/convex/orgs.ts
+cp /tmp/http.ts    /opt/ollalink/backend/convex/convex/http.ts
+cp /tmp/jobs.ts    /opt/ollalink/backend/convex/convex/jobs.ts
 echo ok
 
 echo "=== redeploy Convex (Node) ==="
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 "$NODE" "$CVX" deploy -y
 echo "PLATFORM_DEPLOY_DONE"

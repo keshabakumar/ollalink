@@ -4,7 +4,7 @@
 set -uo pipefail
 NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 
 "$NODE" /opt/ollalink/generateKeys.mjs
 JWT_PRIVATE_KEY="$(cat /tmp/jwt_private_key)"

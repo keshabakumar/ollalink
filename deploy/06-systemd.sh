@@ -6,12 +6,12 @@ BUN=/root/.bun/bin/bun
 
 cat > /etc/systemd/system/ollalink-app.service <<EOF
 [Unit]
-Description=Ollalink dashboard (Next.js, apps/app)
+Description=Ollalink dashboard (Next.js, frontend/dashboard)
 After=network.target docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/ollalink/apps/app
+WorkingDirectory=/opt/ollalink/frontend/dashboard
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=0.0.0.0
@@ -25,12 +25,12 @@ EOF
 
 cat > /etc/systemd/system/ollalink-web.service <<EOF
 [Unit]
-Description=Ollalink marketing site (Next.js, apps/web)
+Description=Ollalink marketing site (Next.js, frontend/marketing)
 After=network.target docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/ollalink/apps/web
+WorkingDirectory=/opt/ollalink/frontend/marketing
 Environment=NODE_ENV=production
 Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0

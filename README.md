@@ -45,26 +45,44 @@ opinionated monorepo that grows with your business.
 
 ## Directory Structure
 
+> See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full codebase map, data
+> flow, and per-package details. See [`ENV.md`](./ENV.md) for all env vars.
+
 ```
 .
-├── apps                         # App workspace
-│    ├── app                     # App - your product
-│    ├── web                     # Marketing site
-│    └── ...
-├── packages                     # Shared packages between apps
-│    ├── analytics               # OpenPanel analytics
-│    ├── backend                 # Convex (API, Auth, Database, Storage, Background Jobs, Validated Server Actions, Cache, Rate Limiting)
-│    ├── email                   # React email library
-│    ├── logger                  # Logger library
-│    └── ui                      # Shared UI components (Shadcn)
-├── tooling                      # are the shared configuration that are used by the apps and packages
-│    └── typescript              # Shared TypeScript configuration
-├── .cursorrules                 # Cursor rules specific to this project
-├── biome.json                   # Biome configuration
+├── frontend/                    # 🖥️  Frontend apps (workspace: frontend/*)
+│    ├── dashboard               # @v1/app  — Next.js dashboard (port 3000)
+│    └── marketing              # @v1/web  — Next.js marketing site (port 3001)
+├── backend/                     # ⚙️  Backend services (workspace: backend/*)
+│    ├── convex                  # @v1/backend — Convex (API, Auth, DB, Jobs, JWKS, Billing)
+│    ├── relay                   # @v1/relay — WebSocket relay for WebRTC (port 8080)
+│    └── reference-api          # Reference external backend (Node, :4000)
+├── shared/                      # 📦  Shared libraries (workspace: shared/*)
+│    ├── ui                      # Shared UI components (Shadcn/Radix)
+│    ├── email                   # React Email templates
+│    ├── analytics               # OpenPanel analytics (client/server/events)
+│    ├── logger                  # pino logger
+│    └── tooling-typescript      # Shared tsconfig bases (base/nextjs/react-library)
+├── windows-agent                # Electron desktop agent (active Windows agent)
+├── deploy                        # Numbered bash deployment runbook (01–53)
+│    └── helpers                 # Standalone one-off / diagnostic scripts
+├── e2e                          # Playwright + adversarial security suites
+├── scripts                      # Root-level one-off dev/utility scripts
+├── self-hosted                  # docker-compose for GlitchTip + Mailpit
+├── archive                       # Reference-only snapshots (NOT in workspace)
+│    ├── agent-win-archive       # Original Rust Windows agent (non-functional)
+│    └── convex-ready-template-main # Archived upstream template
+├── biome.json                   # Biome configuration (lint/format)
 ├── turbo.json                   # Turbo configuration
+├── project.config.ts            # Central project config (host, ports, backend)
+├── ARCHITECTURE.md              # Full codebase map
+├── ENV.md                       # Environment variables reference
+├── ROADMAP.md / session.md
 ├── LICENSE
 └── README.md
 ```
+
+> **Where is…?** Frontend → `frontend/` · Backend → `backend/` · Shared → `shared/`
 
 ## Prerequisites
 
@@ -96,11 +114,15 @@ bun install
 
 ### Set up environment variables
 
-Copy the example environment files and fill in your values:
+Copy the example environment files and fill in your values. See [`ENV.md`](./ENV.md)
+for the full list per package.
 
 ```bash
-cp apps/app/.env.example apps/app/.env.local
-cp apps/web/.env.example apps/web/.env.local
+cp frontend/dashboard/.env.example frontend/dashboard/.env.local
+cp frontend/marketing/.env.example frontend/marketing/.env.local
+cp backend/relay/.env.example backend/relay/.env
+# Convex backend vars are set on the dashboard or via `convex env set`:
+#   see backend/convex/.env.example
 ```
 
 ### Configure Convex

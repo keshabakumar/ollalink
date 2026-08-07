@@ -4,13 +4,13 @@ set -uo pipefail
 NODE=/usr/bin/node
 NEXT=/opt/ollalink/node_modules/next/dist/bin/next
 echo "=== place UI files ==="
-cp /tmp/platform_page.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/platform/page.tsx"
-mkdir -p "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/files"
-cp /tmp/files_page.tsx    "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/files/page.tsx"
-cp /tmp/navigation.tsx    "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/_components/navigation.tsx"
+cp /tmp/platform_page.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/platform/page.tsx"
+mkdir -p "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/files"
+cp /tmp/files_page.tsx    "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/files/page.tsx"
+cp /tmp/navigation.tsx    "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/_components/navigation.tsx"
 echo ok
 echo "=== rebuild (Node) ==="
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 set -e
 "$NODE" "$NEXT" build
 set +e

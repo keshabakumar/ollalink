@@ -4,7 +4,7 @@
 set -uo pipefail
 NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 
 EMAIL="phase0-login@ollalink.test"
 

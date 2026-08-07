@@ -2,10 +2,10 @@
 # Seed a large workspace and profile read-amplification of count-by-collect queries.
 set -uo pipefail
 N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
-cp /tmp/seed.ts          /opt/ollalink/packages/backend/convex/seed.ts
-cp /tmp/schema.ts        /opt/ollalink/packages/backend/convex/schema.ts
-cp /tmp/notifications.ts /opt/ollalink/packages/backend/convex/notifications.ts
-cd /opt/ollalink/packages/backend
+cp /tmp/seed.ts          /opt/ollalink/backend/convex/convex/seed.ts
+cp /tmp/schema.ts        /opt/ollalink/backend/convex/convex/schema.ts
+cp /tmp/notifications.ts /opt/ollalink/backend/convex/convex/notifications.ts
+cd /opt/ollalink/backend/convex
 echo "=== deploy (index backfill) ==="
 "$N" "$C" deploy -y 2>&1 | tail -2
 A=$("$N" "$C" run jobs:firstUserId 2>&1 | tail -1 | tr -d '"[:space:]')

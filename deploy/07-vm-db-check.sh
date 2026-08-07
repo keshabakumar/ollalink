@@ -12,7 +12,7 @@ if [ ! -x "$NODE" ]; then
 fi
 echo "node: $($NODE --version) at $NODE"
 
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== tables (before) ==="

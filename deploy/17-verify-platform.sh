@@ -3,7 +3,7 @@
 set -uo pipefail
 NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 USERID="$("$NODE" "$CVX" run jobs:firstUserId 2>&1 | tail -1 | tr -d '"[:space:]')"
 echo "userId: $USERID"
 

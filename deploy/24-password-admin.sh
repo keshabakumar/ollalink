@@ -3,8 +3,8 @@
 set -uo pipefail
 NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cp /tmp/auth.ts /opt/ollalink/packages/backend/convex/auth.ts
-cd /opt/ollalink/packages/backend
+cp /tmp/auth.ts /opt/ollalink/backend/convex/convex/auth.ts
+cd /opt/ollalink/backend/convex
 
 echo "=== deploy (password provider) ==="
 "$NODE" "$CVX" deploy -y 2>&1 | tail -5

@@ -6,8 +6,8 @@ export PATH="$HOME/.bun/bin:$PATH"
 VM_IP=10.1.30.14
 cd /opt/ollalink
 
-echo "=== apps/app/.env ==="
-cat > apps/app/.env <<EOF
+echo "=== frontend/dashboard/.env ==="
+cat > frontend/dashboard/.env <<EOF
 NEXT_PUBLIC_CONVEX_URL=http://${VM_IP}:3210
 NEXT_PUBLIC_OPENPANEL_CLIENT_ID=
 OPENPANEL_SECRET_KEY=
@@ -18,8 +18,8 @@ SENTRY_ORG=
 SENTRY_PROJECT=
 EOF
 
-echo "=== apps/web/.env ==="
-cat > apps/web/.env <<EOF
+echo "=== frontend/marketing/.env ==="
+cat > frontend/marketing/.env <<EOF
 NEXT_PUBLIC_CONVEX_URL=http://${VM_IP}:3210
 NEXT_PUBLIC_APP_URL=http://${VM_IP}:3000
 NEXT_PUBLIC_OPENPANEL_CLIENT_ID=
@@ -31,5 +31,5 @@ echo "=== build (turbo, concurrency=1) ==="
 bun run build --concurrency=1
 
 echo "=== build outputs ==="
-ls -d apps/app/.next apps/web/.next 2>/dev/null && echo "both .next dirs present"
+ls -d frontend/dashboard/.next frontend/marketing/.next 2>/dev/null && echo "both .next dirs present"
 echo "BUILD_DONE"

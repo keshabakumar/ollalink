@@ -26,7 +26,7 @@ This creates an admin user (`admin@myos.test`), an org (`myos`), and a project (
 then prints the DSN.
 
 ## Wire the app
-Set in `apps/app/.env` (baked at build; the SDK only sends in `NODE_ENV=production`):
+Set in `frontend/dashboard/.env` (baked at build; the SDK only sends in `NODE_ENV=production`):
 ```
 NEXT_PUBLIC_SENTRY_DSN=<the DSN above>
 # optional: NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1

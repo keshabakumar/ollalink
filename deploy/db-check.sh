@@ -11,7 +11,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 echo "node: $(node --version)"
 
-cd /mnt/c/Users/test/Downloads/myos/packages/backend
+cd /opt/ollalink/backend/convex
 CVX=../../node_modules/convex/bin/main.js
 
 echo "=== tables (before) ==="

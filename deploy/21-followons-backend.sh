@@ -5,9 +5,9 @@ NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
 echo "=== place files ==="
 for f in schema orgs backend http files; do
-  cp "/tmp/$f.ts" "/opt/ollalink/packages/backend/convex/$f.ts"
+  cp "/tmp/$f.ts" "/opt/ollalink/backend/convex/convex/$f.ts"
 done
 echo ok
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 "$NODE" "$CVX" deploy -y
 echo "FOLLOWONS_DEPLOY_DONE"

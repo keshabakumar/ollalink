@@ -14,7 +14,7 @@ docker run -d --name mailpit --restart unless-stopped \
 The auth providers send via `convex/email.ts` (a `"use node"` action using `nodemailer`).
 Point it at Mailpit:
 ```bash
-cd packages/backend
+cd backend/convex
 convex env set SMTP_HOST <mailpit-host>   # e.g. the VM LAN IP reachable from the backend
 convex env set SMTP_PORT 1025
 convex env set SMTP_FROM auth@myos.local

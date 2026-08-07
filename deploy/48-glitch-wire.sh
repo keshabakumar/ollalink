@@ -5,7 +5,7 @@ NODE=/usr/bin/node; NEXT=/opt/ollalink/node_modules/next/dist/bin/next
 DSN='https://608c0e3c89a04c8283670450b88d7e00@approx-fountain-accepts-forget.trycloudflare.com/1'
 
 echo "=== set NEXT_PUBLIC_SENTRY_DSN + rebuild app ==="
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 grep -v '^NEXT_PUBLIC_SENTRY_DSN=' .env > .env.tmp 2>/dev/null || true
 mv .env.tmp .env 2>/dev/null || true
 echo "NEXT_PUBLIC_SENTRY_DSN=$DSN" >> .env
@@ -20,7 +20,7 @@ Sentry.init({ dsn: process.env.DSN, tracesSampleRate: 0 });
 Sentry.captureException(new Error("glitchtip wiring test " + Date.now()));
 Sentry.close(5000).then(() => console.log("flushed")).catch((e) => console.log("flush-err", e.message));
 JS
-( cd /opt/ollalink/apps/app && DSN="$DSN" "$NODE" /tmp/gtest.js )
+( cd /opt/ollalink/frontend/dashboard && DSN="$DSN" "$NODE" /tmp/gtest.js )
 echo "waiting for worker ingest..."; sleep 10
 
 echo "=== verify GlitchTip stored it ==="

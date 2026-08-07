@@ -7,8 +7,8 @@
   "plan": "free",
   "healthCheckPath": "/health",
   "autoDeploy": true,
-  "dockerfilePath": "apps/relay/Dockerfile",
-  "dockerContext": "apps/relay",
+  "dockerfilePath": "backend/relay/Dockerfile",
+  "dockerContext": "backend/relay",
   "envVars": [
     { "key": "PORT", "value": "8080" }
   ]

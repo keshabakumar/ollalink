@@ -2,13 +2,13 @@
 # In-app notifications: schema + backend + bell. Verify a job completion emits one.
 set -uo pipefail
 NODE=/usr/bin/node; NEXT=/opt/ollalink/node_modules/next/dist/bin/next; CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cp /tmp/schema.ts        /opt/ollalink/packages/backend/convex/schema.ts
-cp /tmp/notifications.ts /opt/ollalink/packages/backend/convex/notifications.ts
-cp /tmp/jobs.ts          /opt/ollalink/packages/backend/convex/jobs.ts
-cp /tmp/orgs.ts          /opt/ollalink/packages/backend/convex/orgs.ts
-cp /tmp/topbar.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/_components/topbar.tsx"
-cp /tmp/bell.tsx   "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/_components/notifications-bell.tsx"
-cd /opt/ollalink/packages/backend
+cp /tmp/schema.ts        /opt/ollalink/backend/convex/convex/schema.ts
+cp /tmp/notifications.ts /opt/ollalink/backend/convex/convex/notifications.ts
+cp /tmp/jobs.ts          /opt/ollalink/backend/convex/convex/jobs.ts
+cp /tmp/orgs.ts          /opt/ollalink/backend/convex/convex/orgs.ts
+cp /tmp/topbar.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/_components/topbar.tsx"
+cp /tmp/bell.tsx   "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/_components/notifications-bell.tsx"
+cd /opt/ollalink/backend/convex
 set -e
 "$NODE" "$CVX" deploy -y 2>&1 | tail -2
 set +e
@@ -19,7 +19,7 @@ WS=$("$NODE" "$CVX" run orgs:createWorkspaceForUser "{\"userId\":\"$A\",\"name\"
 sleep 5
 echo "=== notifications for $A ==="
 "$NODE" "$CVX" data notifications 2>&1 | grep "$A" | head -3
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 set -e
 "$NODE" "$NEXT" build 2>&1 | tail -4
 set +e

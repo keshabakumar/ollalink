@@ -6,13 +6,13 @@ NODE=/usr/bin/node
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== sync changed source files into place ==="
-cp /tmp/ResendOTP.ts         /opt/ollalink/packages/backend/convex/ResendOTP.ts
-cp /tmp/auth.ts              /opt/ollalink/packages/backend/convex/auth.ts
-cp /tmp/email-otp-signin.tsx /opt/ollalink/apps/app/src/components/email-otp-signin.tsx
-cp /tmp/login_page.tsx      "/opt/ollalink/apps/app/src/app/[locale]/(public)/login/page.tsx"
+cp /tmp/ResendOTP.ts         /opt/ollalink/backend/convex/convex/ResendOTP.ts
+cp /tmp/auth.ts              /opt/ollalink/backend/convex/convex/auth.ts
+cp /tmp/email-otp-signin.tsx /opt/ollalink/frontend/dashboard/src/components/email-otp-signin.tsx
+cp /tmp/login_page.tsx      "/opt/ollalink/frontend/dashboard/src/app/[locale]/(public)/login/page.tsx"
 echo "ok"
 
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 
 echo "=== generate JWT keys ==="
 "$NODE" /opt/ollalink/generateKeys.mjs

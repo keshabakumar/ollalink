@@ -3,9 +3,9 @@
 set -euo pipefail
 NODE=/usr/bin/node
 NEXT=/opt/ollalink/node_modules/next/dist/bin/next
-cp /tmp/password-signin.tsx /opt/ollalink/apps/app/src/components/password-signin.tsx
-cp /tmp/login_page.tsx "/opt/ollalink/apps/app/src/app/[locale]/(public)/login/page.tsx"
-cd /opt/ollalink/apps/app
+cp /tmp/password-signin.tsx /opt/ollalink/frontend/dashboard/src/components/password-signin.tsx
+cp /tmp/login_page.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(public)/login/page.tsx"
+cd /opt/ollalink/frontend/dashboard
 "$NODE" "$NEXT" build 2>&1 | tail -6
 systemctl restart ollalink-app
 sleep 6

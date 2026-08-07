@@ -6,17 +6,17 @@ NEXT=/opt/ollalink/node_modules/next/dist/bin/next
 CVX=/opt/ollalink/node_modules/convex/bin/main.js
 
 echo "=== place files ==="
-cp /tmp/jobs.ts    /opt/ollalink/packages/backend/convex/jobs.ts
-cp /tmp/schema.ts  /opt/ollalink/packages/backend/convex/schema.ts
-cp /tmp/http.ts    /opt/ollalink/packages/backend/convex/http.ts
-cp /tmp/server.mjs /opt/ollalink/backend-echo/server.mjs
-mkdir -p "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/jobs"
-cp /tmp/jobs_page.tsx  "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/jobs/page.tsx"
-cp /tmp/navigation.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/_components/navigation.tsx"
+cp /tmp/jobs.ts    /opt/ollalink/backend/convex/convex/jobs.ts
+cp /tmp/schema.ts  /opt/ollalink/backend/convex/convex/schema.ts
+cp /tmp/http.ts    /opt/ollalink/backend/convex/convex/http.ts
+cp /tmp/server.mjs /opt/ollalink/backend/reference-api/server.mjs
+mkdir -p "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/jobs"
+cp /tmp/jobs_page.tsx  "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/jobs/page.tsx"
+cp /tmp/navigation.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/_components/navigation.tsx"
 echo ok
 
 echo "=== redeploy Convex (Node) ==="
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 "$NODE" "$CVX" deploy -y
 
 echo "=== restart echo backend ==="
@@ -25,7 +25,7 @@ sleep 2
 echo "echo: $(systemctl is-active ollalink-echo.service)"
 
 echo "=== rebuild dashboard (Node) ==="
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 "$NODE" "$NEXT" build
 
 echo "=== restart dashboard ==="

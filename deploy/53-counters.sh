@@ -3,9 +3,9 @@
 set -uo pipefail
 N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
 for f in schema counters dashboard jobs files orgs; do
-  cp "/tmp/$f.ts" "/opt/ollalink/packages/backend/convex/$f.ts"
+  cp "/tmp/$f.ts" "/opt/ollalink/backend/convex/convex/$f.ts"
 done
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 echo "=== deploy ==="
 "$N" "$C" deploy -y 2>&1 | tail -3
 echo "=== backfill counters from existing rows ==="

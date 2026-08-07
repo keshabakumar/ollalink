@@ -3,9 +3,9 @@
 set -uo pipefail
 NODE=/usr/bin/node; CVX=/opt/ollalink/node_modules/convex/bin/main.js
 for f in auditLog audit jobs orgs apiKeys files; do
-  cp "/tmp/$f.ts" "/opt/ollalink/packages/backend/convex/$f.ts"
+  cp "/tmp/$f.ts" "/opt/ollalink/backend/convex/convex/$f.ts"
 done
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 echo "=== deploy ==="
 "$NODE" "$CVX" deploy -y 2>&1 | tail -3
 echo "=== exercise audited actions ==="

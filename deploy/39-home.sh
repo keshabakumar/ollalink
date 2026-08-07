@@ -2,12 +2,12 @@
 # Home overview: stats query + dashboard home rebuild.
 set -uo pipefail
 NODE=/usr/bin/node; NEXT=/opt/ollalink/node_modules/next/dist/bin/next; CVX=/opt/ollalink/node_modules/convex/bin/main.js
-cp /tmp/dashboard.ts /opt/ollalink/packages/backend/convex/dashboard.ts
-cp /tmp/home_page.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/page.tsx"
-cd /opt/ollalink/packages/backend
+cp /tmp/dashboard.ts /opt/ollalink/backend/convex/convex/dashboard.ts
+cp /tmp/home_page.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/page.tsx"
+cd /opt/ollalink/backend/convex
 set -e
 "$NODE" "$CVX" deploy -y 2>&1 | tail -2
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 "$NODE" "$NEXT" build 2>&1 | tail -5
 set +e
 systemctl restart ollalink-app; sleep 6

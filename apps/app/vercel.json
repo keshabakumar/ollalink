@@ -1,3 +1,0 @@
-{
-  "buildCommand": "cd ../../apps/app && turbo run build --force"
-}

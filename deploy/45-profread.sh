@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 N=/usr/bin/node; C=/opt/ollalink/node_modules/convex/bin/main.js
 A=$("$N" "$C" run jobs:firstUserId 2>/dev/null | tail -1 | tr -d '"[:space:]')
 WS=$("$N" "$C" data workspaces 2>/dev/null | grep LoadTest | grep -oE 'kx7[a-z0-9]+' | head -1)

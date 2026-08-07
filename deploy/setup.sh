@@ -46,16 +46,16 @@ EOF
 echo "    waiting for backend health..."
 for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:3210/version >/dev/null 2>&1 && break; sleep 2; done
 
-echo "==> [4/9] admin key -> packages/backend/.env.local"
-if ! grep -q CONVEX_SELF_HOSTED_ADMIN_KEY packages/backend/.env.local 2>/dev/null; then
+echo "==> [4/9] admin key -> backend/convex/.env.local"
+if ! grep -q CONVEX_SELF_HOSTED_ADMIN_KEY backend/convex/.env.local 2>/dev/null; then
   ADMIN_KEY="$(cd self-hosted && docker compose exec -T backend ./generate_admin_key.sh | tr -d '\r' | grep -F '|' | tail -1 | tr -d '[:space:]')"
-  cat > packages/backend/.env.local <<EOF
+  cat > backend/convex/.env.local <<EOF
 CONVEX_SELF_HOSTED_URL='http://127.0.0.1:3210'
 CONVEX_SELF_HOSTED_ADMIN_KEY='${ADMIN_KEY}'
 EOF
 fi
 
-cd "$REPO/packages/backend"
+cd "$REPO/backend/convex"
 
 echo "==> [5/9] auth keys (JWT_PRIVATE_KEY / JWKS / SITE_URL)"
 if ! "$NODE" "$CVX" env list 2>/dev/null | grep -q JWT_PRIVATE_KEY; then
@@ -67,9 +67,9 @@ fi
 "$NODE" "$CVX" env set -- SITE_URL "http://${HOST}:3000" >/dev/null
 
 echo "==> [6/9] hybrid adapter secrets + echo backend env"
-mkdir -p "$REPO/backend-echo"
-if [ ! -f "$REPO/backend-echo/.env" ]; then
-  cat > "$REPO/backend-echo/.env" <<EOF
+mkdir -p "$REPO/backend/reference-api"
+if [ ! -f "$REPO/backend/reference-api/.env" ]; then
+  cat > "$REPO/backend/reference-api/.env" <<EOF
 PORT=4000
 SERVICE_KEY=$(openssl rand -hex 24)
 WEBHOOK_SECRET=$(openssl rand -hex 24)
@@ -77,7 +77,7 @@ CONVEX_SITE_URL=http://${HOST}:3211
 CONVEX_AUDIENCE=convex
 EOF
 fi
-set -a; . "$REPO/backend-echo/.env"; set +a
+set -a; . "$REPO/backend/reference-api/.env"; set +a
 "$NODE" "$CVX" env set -- BACKEND_BASE_URL "http://${HOST}:4000" >/dev/null
 "$NODE" "$CVX" env set -- BACKEND_SERVICE_KEY "$SERVICE_KEY" >/dev/null
 "$NODE" "$CVX" env set -- BACKEND_WEBHOOK_SECRET "$WEBHOOK_SECRET" >/dev/null
@@ -86,11 +86,11 @@ echo "==> [7/9] deploy Convex functions"
 "$NODE" "$CVX" deploy -y
 
 echo "==> [8/9] build dashboard"
-cat > "$REPO/apps/app/.env" <<EOF
+cat > "$REPO/frontend/dashboard/.env" <<EOF
 NEXT_PUBLIC_CONVEX_URL=http://${HOST}:3210
 NEXT_PUBLIC_BACKEND_URL=http://${HOST}:4000
 EOF
-( cd "$REPO/apps/app" && "$NODE" "$NEXT" build )
+( cd "$REPO/frontend/dashboard" && "$NODE" "$NEXT" build )
 
 echo "==> [9/9] systemd services"
 cat > /etc/systemd/system/ollalink-app.service <<UNIT
@@ -98,7 +98,7 @@ cat > /etc/systemd/system/ollalink-app.service <<UNIT
 Description=Ollalink dashboard (Next.js)
 After=network.target docker.service
 [Service]
-WorkingDirectory=$REPO/apps/app
+WorkingDirectory=$REPO/frontend/dashboard
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=0.0.0.0
@@ -112,9 +112,9 @@ cat > /etc/systemd/system/ollalink-echo.service <<UNIT
 Description=Ollalink echo reference backend
 After=network.target
 [Service]
-WorkingDirectory=$REPO/backend-echo
-EnvironmentFile=$REPO/backend-echo/.env
-ExecStart=/usr/bin/node $REPO/backend-echo/server.mjs
+WorkingDirectory=$REPO/backend/reference-api
+EnvironmentFile=$REPO/backend/reference-api/.env
+ExecStart=/usr/bin/node $REPO/backend/reference-api/server.mjs
 Restart=always
 [Install]
 WantedBy=multi-user.target
@@ -127,5 +127,5 @@ echo "==> DONE for HOST=$HOST"
 echo "    Dashboard:        http://${HOST}:3000"
 echo "    Marketing site:   http://${HOST}:3001"
 echo "    Convex dashboard: http://${HOST}:6791  (deployment URL http://${HOST}:3210)"
-echo "    Admin key:        $(grep CONVEX_SELF_HOSTED_ADMIN_KEY "$REPO/packages/backend/.env.local" | cut -d= -f2-)"
+echo "    Admin key:        $(grep CONVEX_SELF_HOSTED_ADMIN_KEY "$REPO/backend/convex/.env.local" | cut -d= -f2-)"
 echo "    (Sign-in OTP is logged to the Convex dashboard until RESEND_API_KEY is set.)"

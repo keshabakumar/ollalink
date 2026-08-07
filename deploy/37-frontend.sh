@@ -2,10 +2,10 @@
 # Frontend: member-management UI + error boundary + 404.
 set -uo pipefail
 NODE=/usr/bin/node; NEXT=/opt/ollalink/node_modules/next/dist/bin/next
-cp /tmp/platform_page.tsx "/opt/ollalink/apps/app/src/app/[locale]/(dashboard)/platform/page.tsx"
-cp /tmp/error.tsx     "/opt/ollalink/apps/app/src/app/[locale]/error.tsx"
-cp /tmp/not-found.tsx "/opt/ollalink/apps/app/src/app/[locale]/not-found.tsx"
-cd /opt/ollalink/apps/app
+cp /tmp/platform_page.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/(dashboard)/platform/page.tsx"
+cp /tmp/error.tsx     "/opt/ollalink/frontend/dashboard/src/app/[locale]/error.tsx"
+cp /tmp/not-found.tsx "/opt/ollalink/frontend/dashboard/src/app/[locale]/not-found.tsx"
+cd /opt/ollalink/frontend/dashboard
 set -e
 "$NODE" "$NEXT" build 2>&1 | tail -8
 set +e

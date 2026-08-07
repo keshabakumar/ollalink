@@ -19,14 +19,14 @@ EOF
 ( cd /opt/ollalink/self-hosted && docker compose up -d )
 sleep 6
 
-cd /opt/ollalink/packages/backend
+cd /opt/ollalink/backend/convex
 "$NODE" "$CVX" env set -- SITE_URL "$APP_URL" >/dev/null && echo "SITE_URL set"
 
-cat > /opt/ollalink/apps/app/.env <<EOF
+cat > /opt/ollalink/frontend/dashboard/.env <<EOF
 NEXT_PUBLIC_CONVEX_URL=$CVX_URL
 NEXT_PUBLIC_BACKEND_URL=http://10.1.30.14:4000
 EOF
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 "$NODE" "$NEXT" build 2>&1 | tail -4
 systemctl restart ollalink-app; sleep 6
 echo "app=$(systemctl is-active ollalink-app)"

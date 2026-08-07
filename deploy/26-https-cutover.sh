@@ -23,7 +23,7 @@ EOF
 sleep 6
 
 echo "=== echo backend -> https site url ==="
-sed -i 's#^CONVEX_SITE_URL=.*#CONVEX_SITE_URL=https://10.1.30.14:3216#' /opt/ollalink/backend-echo/.env
+sed -i 's#^CONVEX_SITE_URL=.*#CONVEX_SITE_URL=https://10.1.30.14:3216#' /opt/ollalink/backend/reference-api/.env
 
 echo "=== systemd: NODE_EXTRA_CA_CERTS for app + echo ==="
 mkdir -p /etc/systemd/system/ollalink-app.service.d /etc/systemd/system/ollalink-echo.service.d
@@ -32,11 +32,11 @@ printf '[Service]\nEnvironment=NODE_EXTRA_CA_CERTS=%s\n' "$CA" > /etc/systemd/sy
 systemctl daemon-reload
 
 echo "=== rebuild app (https convex url) ==="
-cat > /opt/ollalink/apps/app/.env <<EOF
+cat > /opt/ollalink/frontend/dashboard/.env <<EOF
 NEXT_PUBLIC_CONVEX_URL=https://10.1.30.14:3215
 NEXT_PUBLIC_BACKEND_URL=http://10.1.30.14:4000
 EOF
-cd /opt/ollalink/apps/app
+cd /opt/ollalink/frontend/dashboard
 set -e
 "$NODE" "$NEXT" build 2>&1 | tail -6
 set +e

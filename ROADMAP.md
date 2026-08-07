@@ -31,7 +31,7 @@ Self-hosted Convex (Docker) · multi-tenant platform (workspaces/RBAC/invites) �
 - **Verify `deploy/setup.sh` on a clean VM** — the one-command clone install is written but never run end-to-end.
 
 ## 3. Audit backlog (low severity)
-- **BUG-6** — strip/gate internal seed/test functions (`createInternal`, `*ForUser`, `firstUserId`, `record`, `inviteForUser`) behind a `DEV_SEED` flag, and treat `backend-echo` as reference-only, for real deployments. (They're `internal*`, not publicly callable — cleanup, not a vuln.)
+- **BUG-6** — strip/gate internal seed/test functions (`createInternal`, `*ForUser`, `firstUserId`, `record`, `inviteForUser`) behind a `DEV_SEED` flag, and treat `backend/reference-api` as reference-only, for real deployments. (They're `internal*`, not publicly callable — cleanup, not a vuln.)
 - **BUG-8** — pagination (see Dashboard UX above).
 
 ## Performance (from the read-amplification audit)

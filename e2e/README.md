@@ -3,7 +3,7 @@
 These run against a **live deployed stack** (a real Convex backend + the Next app),
 so they are intentionally **not** part of the blocking CI in `.github/workflows/ci.yml`.
 The fast, in-process equivalents — including the full tenant-isolation/IDOR matrix —
-live in `packages/backend/convex/security.test.ts` and **do** run on every PR.
+live in `backend/convex/convex/security.test.ts` and **do** run on every PR.
 
 ## What's here
 | Suite | Layer | What it proves |
