@@ -1,60 +1,54 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@v1/ui/select";
 import { cn } from "@v1/ui/utils";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+const ORDER = ["light", "dark", "system"] as const;
+type Theme = (typeof ORDER)[number];
+
+const ICONS: Record<Theme, typeof Sun> = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+};
+
+const LABELS: Record<Theme, string> = {
+  light: "Light",
+  dark: "Dark",
+  system: "System",
+};
+
 export function ThemeSwitcher({ triggerClass }: { triggerClass?: string }) {
-  const { theme: currentTheme, setTheme, themes } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
   // Fix React #418: useTheme() returns undefined on the server but the resolved
-  // theme on the client, so the icon/label mismatch. Gate on mounted so both
-  // server and first client render agree (show the System/monitor placeholder).
+  // theme on the client. Gate on mounted so both server and first client render
+  // agree (show the System/monitor placeholder).
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const theme = mounted ? currentTheme : undefined;
+
+  const theme = (mounted ? currentTheme : "system") as Theme;
+  const Icon = ICONS[theme] ?? Monitor;
+
+  const cycle = () => {
+    const idx = ORDER.indexOf(theme as Theme);
+    const next = ORDER[(idx + 1) % ORDER.length];
+    setTheme(next);
+  };
+
   return (
-    <Select
-      value={theme}
-      onValueChange={(t) => setTheme(t as (typeof themes)[number])}
+    <button
+      type="button"
+      onClick={cycle}
+      aria-label={`Switch theme (current: ${LABELS[theme]})`}
+      title={`Theme: ${LABELS[theme]} (click to change)`}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-primary/60 hover:bg-primary/5 hover:text-primary",
+        triggerClass,
+      )}
     >
-      <SelectTrigger
-        className={cn(
-          "h-6 rounded border-primary/20 bg-secondary !px-2 hover:border-primary/40",
-          triggerClass,
-        )}
-      >
-        <div className="flex items-start gap-2">
-          {theme === "light" ? (
-            <Sun className="h-[14px] w-[14px]" />
-          ) : theme === "dark" ? (
-            <Moon className="h-[14px] w-[14px]" />
-          ) : (
-            <Monitor className="h-[14px] w-[14px]" />
-          )}
-          {theme && (
-            <span className="text-xs font-medium">
-              {theme.charAt(0).toUpperCase() + theme.slice(1)}
-            </span>
-          )}
-        </div>
-      </SelectTrigger>
-      <SelectContent>
-        {themes.map((t) => (
-          <SelectItem
-            key={t}
-            value={t}
-            className={`text-sm font-medium text-primary/60 ${t === theme && "text-primary"}`}
-          >
-            {t && t.charAt(0).toUpperCase() + t.slice(1)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <Icon className="h-4 w-4" />
+      <span className="text-xs font-medium">{LABELS[theme]}</span>
+    </button>
   );
 }
 
